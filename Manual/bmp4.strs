@@ -1,0 +1,29 @@
+struct BITMAPFILEHEADER
+{
+  str [len=2] bfType;
+  u32 bfSize;
+  u16 bfReserved1;
+  u16 bfReserved2;
+  x32 bfOffBits;
+  child BITMAPINFOHEADER;
+}
+
+struct BITMAPINFOHEADER
+{
+  u32 biSize;
+  i32 biWidth;
+  i32 biHeight;
+  u16 biPlanes;
+  u16 biBitCount;
+  enum32 biCompression [enum=biCompression_Type];
+  u32 biSizeImage;
+  i32 biXPelsPerMeter;
+  i32 biYPelsPerMeter;
+  u32 biClrUsed;
+  u32 biClrImportant;
+}
+
+enum biCompression_Type
+{
+  BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS, BI_JPEG, BI_PNG
+}

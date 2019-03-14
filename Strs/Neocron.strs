@@ -1,0 +1,20 @@
+// Neocron Offline Demo: packed file structure
+// Reverse-engineered by Dmitry Jemerov <yole@yole.ru>
+
+[filemask="*.pak"]
+struct NeocronPak
+{
+  u32 Signature;
+  i32 FileCount;
+  child NeocronFile [count=FileCount];
+}
+
+struct NeocronFile
+{
+  u32 FileRecordSize;
+  u32 StartOffset;
+  u32 PackedSize;
+  u32 UnpackedSize;
+  u32 FilenameLength;
+  str [len=FilenameLength] Filename;
+}

@@ -1,0 +1,12 @@
+[filemask="*.pdb"]
+struct PDB_HEADER
+{
+  str [len=40] ident;
+  u32 signature;
+  u32 blocksize;
+  u16 freelist;
+  u16 total_alloc;
+  u32 toc_size;
+  u32;
+  u16 toc_block;
+}

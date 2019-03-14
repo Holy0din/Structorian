@@ -1,0 +1,8 @@
+struct BITMAPFILEHEADER
+{
+  str [len=2] bfType;
+  u32 bfSize;
+  u16 bfReserved1;
+  u16 bfReserved2;
+  x32 bfOffBits;
+}

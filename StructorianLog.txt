@@ -1,0 +1,727 @@
+Structorian Development Log
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+15.10.2004:
+
+ - [byteorder] attribute on a structure also affects double and
+   float fields.
+
+31.07.2004:
+
+ - Possibility to open OLE Structured Storage streams.
+
+25.10.2003:
+
+ - If a struct has multiple child fields with the same [group]
+   value, only one child group is created, instead of multiple
+   groups with the same name.
+
+12.07.2003:
+
+ - Enum values are now treated as unsigned.
+
+16.04.2003:
+
+ - It is now allowed to specify the [value] attribute for string
+   fields. If it specified, the value shown in the field is
+   calculated.
+ - When an alias field is used in a structure, the "Type" column
+   displays the name of the alias type, and not of the base type of
+   the alias.
+ - Improved handling of grid drawing exceptions after a structure
+   loading error.
+ - For field attribute validation errors, the file name, line and
+   column where the error is detected are shown.
+
+15.10.2002:
+
+ === Snapshot 20021015 ===
+
+ - Now Structorian better recovers from errors in structure files
+   that are detected when reloading structures. If an error is detected,
+   all structure panes are closed automatically.
+ - New attribute ``[timefirst]`` for dosdatetime fields. If the attribute
+   is set, the order of time and date words is reversed: the time
+   word goes first, the date word second.
+ - It is no longer necessary to enclose attribute values in
+   parentheses. All the text until a comma or closing square bracket
+   is treated as the attribute value.
+ - The size of structures with ``include`` fields was not calculated
+   correctly.
+ - Dropped the field type ``enumcalc``. Converted all numeric field
+   types to aliases (``i8`` is now an alias for ``i [size=8]``, etc.).
+   It is now possible to specify an expression (``[value]`` attribute)
+   for any numeric field type, not only for enums.
+
+12.10.2002:
+
+ - New field type 'enumcalc', allowing to display the result
+   of evaluating an expression as an enum value.
+ - Changed the behaviour of the 'global' field. Now it changes
+   the value of the global variable if the variable exists.
+   The old behaviour can be imitated through the 'hasglobal'
+   function.
+ - New function 'hasglobal' checking if the specified global
+   variable exists.
+ - Exact file locations are now reported for unclosed parenthesis
+   messages.
+ - Enum fields can now be used in expressions for the nodename
+   field.
+ - Added support for the division remainder operator (%).
+ - New structure attribute 'fieldlike'. If this attribute is
+   set, when the structure is included as a named include,
+   the names of all fields of the included structure are
+   replaced with the include tag, and not appended, as usual.
+ - Some complex nested combinations of if and include fields
+   didn't work quite correctly. Fixed.
+ - Added support for named includes. Now if an include field has
+   a tag attribute, the tag value is prepended to the tags of
+   the fields in the included struct.
+ - The size of blob fields is now calculated correctly, and
+   the field data is properly highlighted when the field is
+   selected.
+ - Added support for bit shift operators (<<, >>).
+ - Added support for the byteorder attribute on structures.
+
+21.08.2002:
+
+ - The maximum length of the hint that is displayed when the mouse
+   is over a cell and the text doesn't fit in the cell has been
+   limited to 10 lines.
+
+19.08.2002:
+
+ - Added new field type oledatetime - date/time in OLE Automation
+   format (8-byte floating point number holding the number of
+   days passed since 30 Dec 1899).
+
+08.08.2002:
+
+ - Now if errors occur when auto-loading .strs files, these errors
+   are reported, and not silently ignored, as before.
+ - Now when scrolling a hex dump view, the last hex line cannot be
+   moved higher than the bottom of the view. Therefore, rotating the
+   mouse wheel when the entire hex dump contents fits into the view
+   does not scroll the view.
+ - If the size of a blob was an exact multiple of 16 bytes, an extra
+   line header was drawn in the hex dump view.
+ - If an error happens when loading a structure or field attribute,
+   more specific location information is now given.
+ - Improved handling of unsupported attributes.
+
+06.08.2002:
+
+ - SizeOf() now returns the correct value for structures containing
+   repeat fields with constant repeat count.
+
+05.08.2002:
+
+ - Now when automatically looking for a .strs file, the subdirectories
+   are searched correctly.
+
+16.07.2002:
+
+ - Implemented support for blob fields. A blob field is a chunk
+   of binary data that is shown as a sequence of bytes and can be
+   saved to a file.
+
+15.07.2002:
+
+ === Snapshot 20020715 ===
+
+ - It is now not possible to create a table view for a group container
+   (a dummy structure containing [group]'ed child structures).
+ - Fixed various problems that appeared when creating a table view
+   for a structure that can have a variable number of fields.
+ - New attribute [followchildren] for child fields. If the attribute
+   is set, each following child structure follows not the preceding
+   structure in the sequence immediately, but the last child of that
+   structure.
+ - If a structure has two separate child fields without explicit
+   offset declarations, these fields are now loaded correctly,
+   one after another, and not starting from the same offset.
+   Using the [group] attribute in such situations works correctly now,
+   as well.
+   Such code now works correctly::
+
+     struct MarshalObject
+     {
+       ...
+       child MarshalObject [group=code];
+       child MarshalObject [group=consts];
+     }
+
+ - Added a new field type elif, allowing to implement "else if"
+   conditions.
+ - Added a new field type assert, providing an easy way to check
+   some condition (structure size, signature value or such) and
+   show an error message if the condition is false.
+ - Fixed an off-by-one error in the code to restore positions.
+ - Expressions spanning multiple lines are now evaluated correctly.
+
+14.07.2002:
+
+ - Significantly increased the speed of loading structures with a
+   large number of children (more than 40x increase on a structure
+   with 25000 children - from 43 seconds to 0.93 seconds).
+
+06.07.2002:
+
+ === Snapshot 20020706 ===
+
+ - The value returned by the ParentCount function was off by one.
+   Now the expected value is returned.
+ - Data within bitfields is now saved correctly after editing.
+ - When a field within a bitfield is clicked, the range of highlighted
+   bytes is now determined more correctly.
+ - Now clicking a byte in the hex dump selects the corresponding
+   field in the field view, if it is present in the active structure.
+ - Hexadecimal numbers prefixed with $ can now be used in expressions.
+ - The filter for the "Load data file" dialog is now generated
+   dynamically from the [filemask] attributes of the structures in
+   the loaded structure file.
+ - Added new field type dosdatetime - date and time in the DOS format.
+
+05.07.2002:
+
+ - Added more predefined aliases:
+     char  -> str  [len=1]
+     wchar -> wstr [len=1]
+ - Bold highlighting for changed data is now preserved for the selected
+   cell.
+ - Unicode strings are now saved correctly.
+ - Null-terminated strings now also terminate at the end of file.
+ - Changed the operation of the rewind field. Now a stack of seek
+   positions is maintained, and rewind returns to the offset before
+   the last seek, and not to the offset before the first seek.
+
+04.07.2002:
+
+ - Added partial support for floating point values in expressions.
+   (The values are truncated to integer in all mathematical operations.)
+ - Added support for a 4-byte floating point type (float)
+   and a 8-byte floating point type (double).
+ - The table view is now preserved when reloading structures.
+ - The calculator now displays results as both integer and hex
+   numbers.
+ - Now clicking a character in the hex dump also selects the
+   corresponding byte.
+ - Reloading structures was broken. Fixed.
+ - Calculator can now be invoked when no structures are loaded.
+ - Implemented the "Go to offset" functionality.
+ - Parent references in [group]'ed children work correctly again.
+
+03.07.2002:
+
+ - Fixed an assertion failure when trying to read a zero length string.
+ - Unknown strings consisting entirely of zero bytes were erroneously
+   highlighted as having a value.
+
+01.07.2002:
+
+ - The color highlighting in the field view is no longer applied
+   to the selected field.
+ - The default [tag] value is now "Unknown", and not the field type.
+ - Now the structure pane is closed only if there was no active
+   structure when the "Select structure" dialog was cancelled.
+ - Some corrections in the syntax of .strs files.
+
+30.06.2002:
+
+ - Added a popup menu to the structure tree, with items "Create table
+   view" and "Create global table view".
+ - The structures matching the table view condition but added after
+   the table view is created are now added to the table view.
+ - The struct attribute for the sibling field is now optional. If it is
+   not specified, the sibling structure is the same structure as the one
+   containing the sibling field.
+ - New structure attribute [tableview] allows to open the local table
+   view automatically when the structure is selected (if the table view
+   is not already open).
+ - The matching for [filemask] attributes was partially case-sensitive
+   and didn't always work correctly. Fixed.
+ - Removed final traces of support for the [repeat] attribute. It didn't
+   really work with the new structure syntax, anyway.
+ - The active structure is preserved when opening the table view.
+ - Fixed various problems with structure navigation when the table
+   view is open.
+ - The sibling field can now be used in top-level structures.
+ - The size of structures with skip and include fields was calculated
+   incorrectly.
+ - Added new function that can be used in expressions - FileSize.
+   Returns the size of the current file.
+ - Now a hourglass cursor is shown while expanding structures with
+   a large number of children.
+ - Structure fields in containers are now freed correctly when an error
+   happens when loading one of the fields.
+ - Now the structure pane is closed if Cancel is pressed in the
+   "Select structure" dialog.
+ - Added display of field types to the field view.
+ - Added possibility to close the table view.
+
+27.06.2002:
+
+ - Now it is possible to create a calculated field with expression
+   referring to the field itself, like:
+
+     local index [value=index+1];
+
+   Previously, it required an additional temporary variable.
+ - [preload] now works correctly with [group] in child fields.
+ - Added new field nodename, allowing to specify additional text
+   displayed in the name of the tree node, besides the name of the
+   structure.
+ - Now the selected area in the hex dump is more correctly scrolled
+   into view when moving within and between structures.
+ - Improved algorithm for detecting whether a structure has child
+   structures before the structure data is actually loaded. Now
+   sibling fields do not mark the structure as having children,
+   and child fields within containers do mark it as such.
+ - Aliases for integer fields work correctly now.
+
+ === Snapshot 20020627 ===
+
+ - Added the dot character to the list of characters that can be
+   used in strings without quoting.
+ - The "calc" field attribute "expr" has been renamed to "value",
+   for consistency with the "global" field.
+
+26.06.2002:
+
+ - Added support for include directive in .strs files, allowing to
+   load additional structure definition files and add their content
+   to the current file.
+
+ === Snapshot 20020626 ===
+
+ - Now if a child field generates more than 64K children, an error is
+   generated. Such large child counts usually appear because the
+   structure definition is incorrect or because a wrong structure has
+   been applied, and Structorian could hang or crash with such child
+   counts.
+ - Structures are now stored in a hash table. Structure names are now
+   case-insensitive.
+ - It is now allowed to specify structure attributes between the struct
+   keyword and the structure name, and also between the structure name
+   and the opening curly brace.
+ - Extended the set of characters that can be used in strings without
+   enclosing the strings in quotation marks or parentheses. The set of
+   valid characters is now::
+
+     ['A'..'Z', 'a'..'z', '_', '0'..'9', '+', '-', '*', '/', '!',
+     '<', '>', '&', '|']
+
+25.06.2002:
+
+ - Added several predefined aliases:
+
+    alias case [default=1] default;
+    alias calc [hidden] local;
+    alias message [error] error;
+
+ - The error flag is no longer set automatically on message fields.
+   Now it is set with a new attribute error.
+ - Added support for field type aliases. You can specify attributes
+   on an alias type, and these attributes will be applied to the
+   base type. For example, after the following definition:
+
+     alias str [len=8] resref;
+
+   you can replace
+
+     str [len=8] Tileset;
+
+   with
+
+     resref Tileset;
+
+ === Snapshot 20020625 ===
+
+ - Removed support for loading structure definitions in XML format.
+   Structorian no longer depends on MSXML.
+
+24.06.2002:
+
+ - Removed support for the autoselect attribute of structures.
+ - Added new attribute filemask. The structure is applied
+   automatically to the files that match its filemask attribute.
+ - Added support for command line arguments. The first argument
+   is the name of the file to open; the second one is the structure
+   file name. If the latter is omitted, Structorian scans the folder
+   where it's located and all its subfolders for ``*.strs`` files and
+   loads the file that has a structure with filemask matching the
+   name of the file.
+
+22.06.2002:
+
+ - Implemented reloading of structure definition files. The
+   current structure is restored after reloading.
+ - The "Save as" functionality was broken: the menu item wasn't
+   available, and the underlying code didn't work since delayed
+   data loading was introduced. These problems have been fixed
+   now.
+ - Previously Structorian couldn't open read-only files. Now it
+   allows opening them, but doesn't allow editing any fields.
+ - New attribute "group" for child fields makes the structures
+   defined in this field children not of the containing structure,
+   but of an intermediate node with the name equal to the value
+   of the group attribute.
+ - New special function StructName - name of the structure.
+ - Added support for string values in expressions. String values
+   are enclosed in quotation marks ("). String values can be compared,
+   used in switch/case fields and concatenated to each other or to
+   integer values.
+ - Added support for else fields.
+
+21.06.2002:
+
+ - Made some changes in field loading and search order to ensure
+   that it is possible to refer in expressions to fields inside
+   <repeat> blocks. The latest loaded field with given ID is
+   taken.
+
+20.06.2002:
+
+ - Added new field type sibling. Analog of child, but the new
+   structure is added on the same level as the current structure,
+   and not a level below.
+ - Implemented logical not operator !.
+ - Added support for C++ style end-of-line comments, starting
+   with //.
+ - It is now allowed to use expressions starting with - without
+   enclosing them in brackets. Note that if the - character
+   is used in other places of the expression, it still needs to
+   be bracketed.
+
+19.06.2002:
+
+ - It is now possible to use expressions in the "offset" attribute
+   of the skip field.
+ - Added error location information to messages reporting structure
+   parsing errors.
+ - New enum attribute "globalmask" causes the bit masks of enum
+   values to be registered as global constants.
+ - Implemented bitwise operations ``&`` and ``|``.
+
+ === Snapshot 20020619 ===
+
+ - Now if the "len" attribute of a str, cstr or wstr field is omitted,
+   the string is read up to the terminating null character.
+ - Fixed memory leaks that occurred after errors loading structure
+   files.
+ - Added checking for duplicate enum names.
+ - Added new attribute "inherit" for enums. All entries of the
+   enum specified as the "inherit" value are added to the current
+   enum.
+
+18.06.2002:
+
+ - Expressions containing parentheses are now parsed correctly.
+ - Now the horizontal splitter position in the data view form is saved
+   only when the structure view is actually visible.
+ - Added possibility to select whether field offsets from the start
+   of file or from the start of structure are shown.
+ - Corrected major problem with table view editing.
+ - Added manifest for new XP look of Structorian.
+ - Structorian now has an icon (primitive, but still better than
+   nothing).
+ - Added toolbar buttons "Create table view" and "Create global table
+   view".
+ - Added menu "Recent Structure Files".
+ - Renamed the menu "Reopen" to "Recent Data Files".
+ - Now when trying to open a file that is already open, it is brought
+   to top, instead of showing an error message.
+
+ === Snapshot 20020618 ===
+
+ - New attribute "readonly" allows to disable editing of certain
+   fields.
+ - It is no longer allowed to edit message and calc fields.
+ - If you start editing a field and then switch to a different
+   structure, Structorian no longer saves the data to the wrong
+   structure.
+ - Now Structorian doesn't show an assertion failure when selecting
+   a message or calc field.
+ - Now Structorian doesn't crash when selecting a structure with no
+   visible fields.
+
+17.06.2002:
+
+ - Previously, a bogus offset was shown for message fields generated
+   on structure errors. Now, no offset at all is shown for them.
+ - Added support for calculated fields (calc). A calculated field
+   shows the value of an expression that is specified as its
+   first parameter.
+
+16.06.2002:
+
+ - Implemented logical operators && and || and compare operators
+   >= and <=.
+ - Implemented support for new, C-like syntax of structure
+   definitions. The old XML format is still supported for now.
+ - The default value of a switch is now marked as <case default="1">,
+   and not as <default>.
+ - Refactored code for loading structures to decouple it from the
+   XML format. The validation code has changed (some checks are
+   more strict now, some are less).
+
+15.06.2002:
+
+ === Snapshot 20020615 ===
+
+ - Implemented "preload" attribute for structure. When such a
+   structure is loaded, it also loads its children automatically.
+   Preloading structures helps against structures appearing from
+   nowhere, but preloading large structures will adversely affect
+   performance.
+ - Better handling for errors when opening data files.
+ - New field type <align> aligns the stream position to a multiple
+   of its "bytes" attribute.
+ - The "value" attribute of <case> fields now fully supports
+   expressions.
+ - New flag "global" on enum entries. If the flag is set, the name
+   and value of the enum entry are appended to the global variable list.
+   If the "global" attribute is set on an enum, all entries of that
+   enum are made globals.
+ - The level of the current structure is now displayed in the status
+   bar.
+ - New special function ParentCount - level of the current structure
+   in the tree. Root level structure has ParentCount=0, and so on.
+ - Added <rewind> field - seeks to the offset that was current before
+   the previous <seek> field.
+ - Added support for Unicode string fields (<wstr>).
+ - Added support for global variables (<global>). The value of the
+   variable is evaluated the first time the structure containing the
+   global is loaded. The value can be used in expressions.
+ - It is now allowed to refer to fields from expressions not only by
+   id, but also by tag. Therefore, if a field has a tag that doesn't
+   contain spaces, it is not necessary to specify an id for it.
+ - Added support for bitfields - <bitfield> field type. These fields
+   allow to divide a single byte/word/dword into multiple bitfields
+   and to assign a type (enum, int, set) to each bitfield.
+ - When the table view is created, the width of its columns is limited
+   to 200 pixels. Previously it was limited to the grid width.
+ - The filter for <unixtime> columns has been translated into English.
+ - The name of the filtered field is now shown in the caption of the
+   enum and set filter edit forms.
+ - Now the hex dump selection is updated correctly when moving through
+   the table view or the structure tree.
+ - It is now possible to create a table view for the top-level
+   structure. Only that structure is added to the table.
+ - Added tabs and menu items for switching between table view and
+   field view.
+ - Finally, the window layout is restored correctly when the
+   structures are loaded after the data file.
+
+14.06.2002:
+
+ - Started working on the Structorian XML schema.
+
+13.06.2002:
+
+ - Now only the size, but not the position of the data view window
+   is saved to the registry. Therefore, multiple opened data view
+   windows are positioned correctly.
+ - The data view window settings are now correctly saved to the
+   registry.
+ - Disabled docking for data view windows. For now, it causes more bugs
+   than usability improvement.
+ - Fixed some bugs with the hex view.
+ - It is now possible to load a data file before loading structures.
+   In this case, the data file will only be shown as a hex dump.
+ - Double-clicking the hex dump now shows the structure selection
+   dialog with the offset of the double-clicked byte in the Offset
+   field.
+ - Added new field Offset to the structure selection dialog.
+ - Added menu item View/Select Structure... to show the structure
+   selection dialog.
+ - Added toolbar.
+ - Changes made when editing fields are now shown in the hex dump.
+
+12.06.2002:
+
+ - Implemented hex view functionality.
+
+11.06.2002:
+
+ - The attribute "offset" on <child> nodes is now optional. If
+   it is omitted, the first child structure begins at the current
+   offset.
+ - New attribute "delta" on enum values allows to specify values
+   relative to the previous entry.
+ - Implemented editing of <unixtime> fields.
+
+ === Snapshot 20020611 ===
+
+ - New field type <unixtime> - date/time in UNIX format.
+   No editing/filtering support yet.
+
+10.06.2002:
+
+ - New field type <message> allows to embed error and text
+   messages in structures.
+ - Added support for <default> nodes inside <switch> nodes -
+   these are included if no <case> nodes matched the value.
+   Only one <default> node is allowed inside a <switch> node.
+ - XML comments within <switch> nodes are now handled correctly.
+ - Previously, if an error occurred during loading data, the
+   error message was repeated in an infinite loop. Now in case
+   of an error all fields before the erroneous field are shown
+   normally, and instead of the erroneous field, a line with
+   the error message is shown.
+ - The expression evaluator now understands hexadecimal numbers
+   (prefixed with 0x or 0X).
+ - Grid column widths in the structure view are now again saved.
+
+ === Snapshot 20020610 ===
+
+ - Now "repeat" attributes for elements inside <if>, <case> and
+   <repeat> tags are handled correctly.
+ - Added the offset column to the data grid. Currently it can show
+   only local offsets in decimal. In future, this will be configurable.
+ - Translated most of the UI strings that were in Russian into
+   English.
+
+09.06.2002:
+
+ - It is now possible to enter a filter condition "show all
+   non-empty strings" in string column filters of the table view.
+ - It is now possible to invert the filters in integer columns
+   in the table view. This allows to use filters like "not equal
+   to 0" or "not within range 1-5".
+ - <repeat> fields are now processed dynamically. Therefore,
+   it is possible to specify expressions in the "count"
+   attribute of <repeat> fields.
+ - Implemented delay loading of data. Previously Structorian
+   loaded the entire data file into the memory, which was quite
+   slow for large files. Now it loads the file in 16K pages as
+   they are accessed, and when saving the modifications, only
+   the changed pages are written to disk.
+ - New field type <if>. If the expression in its "expr" attribute
+   evaluates to true, its children are appended to the struct.
+ - The "field" attribute of the <switch> field has been renamed
+   to "expr".
+ - The calculator form can now be closed by pressing Esc.
+ - The expression evaluator now understands compare operators
+   (==, !=, < and >) and the unary minus operator.
+ - <set> fields containing unknown bits are now also highlighted
+   in blue.
+ - Implemented filtering for <set> and <bits> columns in the
+   table view.
+ - XML comments within enum definitions are now handled
+   correctly.
+ - Implemented filtering for <enum> columns in the table view.
+
+08.06.2002:
+
+ - All <str> fields actually worked as <cstr>.
+ - New attribute "replace" on <include> fields specifies that
+   the structure containing the include is treated as the type
+   of the included structure.
+ - Enumerated fields that have values outside the enum range
+   are now also highlighted in blue.
+ - New features - View/Table view and View/Global table view.
+   The table view shows all siblings of the current structure
+   that have the same type in a single table. The table can be
+   sorted, searched and/or filtered. The global table view
+   shows all structures in the current file that have the same
+   type as the current structure.
+ - Now when moving between structures of different types, the
+   current position in the grid is reset to top of the grid.
+ - Now the size and splitter position of the structure view form
+   are saved in the registry.
+ - Implemented delay loading of structures. Now the structure
+   data is loaded the first time the structure is accessed, and
+   not when the file is first opened.
+ - 'Save as' didn't save the structure under a new name if it
+   was not modified.
+ - Modified status was not tracked correctly for structures
+   with more than 2 nesting levels.
+ - New special field name StructOffset that can be used in
+   expressions - offset of the current structure from the start
+   of file.
+ - It is now allowed to specify hex numbers (prefixed with $ or
+   0x) in the "value" attribute of enums.
+
+07.06.2002:
+
+ - Modified fields are now highlighted in bold. (The highlighting
+   is not reset when the structure is saved - it's a feature.)
+ - Unknown fields with empty values (0 or an empty string)
+   are now highlighted in dark gray, unknown fields with
+   non-empty values - in blue.
+ - Implemented editing for fields of types <set> and <bits>.
+ - Fixed a crash when trying to enter an empty string in the
+   field value.
+ - New attribute "autoselect" for structure definition. If
+   a structure with autoselect=1 exists in the XML file, it is
+   selected automatically when a new data file is opened.
+
+ === Snapshot 20020607 ===
+
+ - Improved handling for the situation when a file in the MRU list
+   no longer exists.
+ - Now the structure is not marked as modified if the value entered
+   when editing is the same as the previous value.
+ - Added new field types <set8>, <set16> and <set32>. These types
+   denote bitmasks where each set bit is shown as the name of the
+   corresponding constant from the <enum>. Editing set fields is
+   not yet supported.
+
+06.06.2002:
+
+ - It is now allowed to specify a dynamically calculated expression
+   in the "len" attribute of <str> and <cstr> fields.
+ - Separated the tag <cstr> into <str> (not necessarily
+   null-terminated) and <cstr> (a null terminator is required).
+ - New field type <seek> allows to seek to an absolute offset
+   in the file. The offset can be specified as an expression
+   that is dynamically calculated.
+ - Now the caption of the window containing two docked pages
+   is the same as the title of the active page, and not
+   "TabDockHost".
+ - Fixed a bug causing the page control to disappear if a page
+   was dragged from a page control and dropped to the same page
+   control.
+ - An exception no longer appears when trying to close a window
+   with two structure views docked side by side.
+ - Now when a modified form is closed, a prompt to save the data
+   is shown.
+ - The modified status of the current structure is now displayed
+   in a status bar panel.
+
+ === Snapshot 06062002 ===
+
+ - Brought back the calculator, which was temporarily disabled when
+   docking was implemented.
+ - Implemented saving data ("Save data file" and "Save data file as"
+   items in the main menu).
+
+05.06.2002:
+
+ - It is no longer possible to sort the data grid by clicking
+   on a column header.
+ - It is now possible to auto-size a column in the data grid by
+   double-clicking the separator line to the right of the header
+   of that column.
+ - Working on support for editing data. Integer, string and enum
+   fields can now be edited. Edited data is not yet saved.
+ - Labels in the structure tree can no longer be edited.
+ - Structorian now displays signed numbers properly.
+ - Improved handling of XML errors when loading structure XML files.
+
+04.06.2002:
+
+ - Now the order of files in the MRU list doesn't get reversed after
+   Structorian is closed and restarted.
+ - Now Structorian is able to view multiple data files at once. It is
+   still not possible to load multiple structure files, but that
+   restriction will most likely stay forever.
+
+03.06.2002:
+
+ - Continuing development. Implemented the expression evaluator.
+
+02.06.2002:
+
+ - Development started.

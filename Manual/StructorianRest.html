@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.2.8: http://docutils.sourceforge.net/" />
+<title>Structorian Script Reference (REST)</title>
+<link rel="stylesheet" href="default.css" type="text/css" />
+</head>
+<body>
+<div class="document" id="structorian-script-reference-rest">
+<h1 class="title">Structorian Script Reference (REST)</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title"><a name="contents">Contents</a></p>
+<ul class="auto-toc simple">
+<li><a class="reference" href="#overall-script-syntax" id="id1" name="id1">1   Overall Script Syntax</a></li>
+<li><a class="reference" href="#script-structure" id="id2" name="id2">2   Script Structure</a><ul class="auto-toc">
+<li><a class="reference" href="#struct-blocks" id="id3" name="id3">2.1   Struct Blocks</a></li>
+<li><a class="reference" href="#field-declarations" id="id4" name="id4">2.2   Field Declarations</a></li>
+<li><a class="reference" href="#enum-blocks" id="id5" name="id5">2.3   Enum Blocks</a></li>
+<li><a class="reference" href="#aliases" id="id6" name="id6">2.4   Aliases</a></li>
+<li><a class="reference" href="#includes" id="id7" name="id7">2.5   Includes</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#field-types-and-attributes" id="id8" name="id8">3   Field Types and Attributes</a><ul class="auto-toc">
+<li><a class="reference" href="#struct-attributes" id="id9" name="id9">3.1   Struct Attributes</a></li>
+<li><a class="reference" href="#enum-attributes" id="id10" name="id10">3.2   Enum Attributes</a></li>
+<li><a class="reference" href="#common-field-attributes" id="id11" name="id11">3.3   Common Field Attributes</a></li>
+<li><a class="reference" href="#integer-fields" id="id12" name="id12">3.4   Integer Fields</a></li>
+<li><a class="reference" href="#string-fields" id="id13" name="id13">3.5   String Fields</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="overall-script-syntax">
+<h1><a class="toc-backref" href="#id1" name="overall-script-syntax">1   Overall Script Syntax</a></h1>
+<p>The Structorian script is a text file in the ANSI codepage. The file
+is processed as a sequence of tokens. Whitespace characters (spaces,
+tabs and line breaks) are used to separate tokens, but carry no semantic
+value.</p>
+<p>Structorian scripts may include end-of-line comments. Like in C++, a
+comment starts with the characters <tt class="literal"><span class="pre">//</span></tt> and continues till the end of the
+line.</p>
+<p>The main token types used in Structorian scripts are strings and numbers.</p>
+<p>Strings can be specified &quot;as is&quot;, without any delimiters, if they start
+with one of the following characters:</p>
+<pre class="literal-block">
+'A'..'Z', 'a'..'z', '_', '0'..'9', '-'
+</pre>
+<p>and the characters after the first are in the following set:</p>
+<pre class="literal-block">
+'A'..'Z', 'a'..'z', '_', '0'..'9', '+', '-', '*', '/', '!', '&lt;', '&gt;', '&amp;', '|', '.'
+</pre>
+<p>If a string contains other characters (for example, spaces), it must be
+enclosed in parentheses or quotation marks. By convention, expressions
+are enclosed in parentheses, and user-visible strings (like field tags)
+are enclosed in quotation marks. However, the parsing code handles both
+cases in the same way. No means are provided for escaping quotation marks,
+so if you need to have a field tag containing quotation marks, it should
+be enclosed in parentheses.</p>
+<p>The following lines are examples of valid strings:</p>
+<pre class="literal-block">
+Signature
+&quot;Size of header in paragraphs&quot;
+(RawData + Parent.ExportDirVA - VA)
+</pre>
+<p>Numbers can be specified in decimal or hexadecimal form. Hexadecimal numbers
+are prefixed with either <tt class="literal"><span class="pre">$</span></tt> or <tt class="literal"><span class="pre">0x</span></tt>. The following lines are examples of
+valid numbers:</p>
+<pre class="literal-block">
+256
+0xFF
+$1234
+</pre>
+</div>
+<div class="section" id="script-structure">
+<h1><a class="toc-backref" href="#id2" name="script-structure">2   Script Structure</a></h1>
+<p>The top-level elements of scripts are called <em>blocks</em>. Currently
+there are four types of blocks: <span class="interpreted">struct</span>, <span class="interpreted">enum</span>, <span class="interpreted">alias</span> and <span class="interpreted">include</span>.</p>
+<div class="section" id="struct-blocks">
+<h2><a class="toc-backref" href="#id3" name="struct-blocks">2.1   Struct Blocks</a></h2>
+<p>A struct block has the following syntax:</p>
+<blockquote>
+<p>[<em>attributes</em>] <strong>struct</strong> [<em>attributes</em>] <em>structName</em> [<em>attributes</em>] <tt class="literal"><span class="pre">{</span></tt> [<em>field</em>] <tt class="literal"><span class="pre">}</span></tt></p>
+<p><em>structName</em> = <em>string</em></p>
+</blockquote>
+<p>The string following the <strong>struct</strong> keyword is the name of the structure.
+The name is case-insensitive and must be unique within the structure file.</p>
+<p>The <em>attributes</em> declaration has the following syntax:</p>
+<blockquote>
+<p><tt class="literal"><span class="pre">[</span></tt> <em>attrName</em> [= <em>attrValue</em> ][ <tt class="literal"><span class="pre">,</span></tt> <em>attrName</em> [= <em>attrValue</em> ]]... <tt class="literal"><span class="pre">]</span></tt></p>
+<p><em>attrName</em> = <em>string</em></p>
+<p><em>attrValue</em> = <em>string</em></p>
+</blockquote>
+<p>If the attribute value is omitted, it is assumed that the value of the
+attribute is &quot;1&quot;. Attribute names are case-sensitive. All attribute
+declarations for a structure or field are merged, and the location of
+the attribute is irrelevant. It is allowed to specify the same attribute
+multiple times, however, only the latest specified value is actually used.</p>
+<p>Only the attributes supported by the respective block or field type can
+be used in an attributes block. Using other attributes is an error.</p>
+<p>The following lines are examples of valid structure blocks. These
+definitions are equivalent.</p>
+<pre class="literal-block">
+[hidden] struct TestStruct { u16 TestField; }
+struct [hidden=1] &quot;TestStruct&quot; { u16 TestField; }
+</pre>
+</div>
+<div class="section" id="field-declarations">
+<h2><a class="toc-backref" href="#id4" name="field-declarations">2.2   Field Declarations</a></h2>
+<p>A field declaration has the following syntax:</p>
+<blockquote>
+<p>[<em>attributes</em>] <em>fieldType</em> [<em>attributes</em>] [<em>defaultAttribute</em>] [<em>attributes</em>] <tt class="literal"><span class="pre">;</span></tt></p>
+<p><em>fieldType</em> = <em>string</em></p>
+<p><em>defaultAttribute</em> = <em>string</em></p>
+</blockquote>
+<p>The declaration of field attributes has the same syntax as the declaration
+of the structure attributes.</p>
+<p><em>fieldType</em> must be either one of the built-in field types or one of the
+aliases defined prior to the definition of the structure using the alias.</p>
+<p><em>defaultAttribute</em> specifies the value of the default attribute of the
+structure. The default attribute depends on the field type. For most
+visible field types, the default attribute is <span class="interpreted">tag</span>.</p>
+<p>The declaration of a container field, which contains other fields, has the
+following syntax:</p>
+<blockquote>
+[<em>attributes</em>] <em>fieldType</em> [<em>attributes</em>] [<em>defaultAttribute</em>] [<em>attributes</em>] <tt class="literal"><span class="pre">{</span></tt> [<em>field</em>]... <tt class="literal"><span class="pre">}</span></tt></blockquote>
+<p>The following lines are examples of valid field declarations. These
+definitions are equivalent. The preferred form is the first one.</p>
+<pre class="literal-block">
+[readonly] u16 Signature;
+u16 [readonly=1, tag=&quot;Signature&quot;];
+u16 (Signature) [readonly=&quot;1&quot;];
+</pre>
+<p>The following container field declarations are also equivalent. Again,
+the first form is preferred. Note that <span class="interpreted">expr</span> is the default attribute
+for the <strong>if</strong> field.</p>
+<pre class="literal-block">
+if (PESignature == &quot;PE&quot;) { message &quot;Found a PE header&quot;; }
+[expr=(PESignature == &quot;PE&quot;)] if { message (Found a PE header); }
+</pre>
+</div>
+<div class="section" id="enum-blocks">
+<h2><a class="toc-backref" href="#id5" name="enum-blocks">2.3   Enum Blocks</a></h2>
+<p>An enum block has the following syntax:</p>
+<blockquote>
+<p>[<em>attributes</em>] <strong>enum</strong> [<em>attributes</em>] <em>enumName</em> [<em>attributes</em>] { <em>constName</em> [<tt class="literal"><span class="pre">=</span></tt> <em>constValue</em>][<tt class="literal"><span class="pre">,</span></tt> <em>constName</em> [<tt class="literal"><span class="pre">=</span></tt> <em>constValue</em>]... <tt class="literal"><span class="pre">}</span></tt></p>
+<p><em>enumName</em> = <em>string</em></p>
+<p><em>constName</em> = <em>string</em></p>
+<p><em>constValue</em> = <em>number</em></p>
+</blockquote>
+<p>Names of enum types are case-insensitive and must be unique within
+the file. Names of constants within an enum are not required to be
+unique, unless the enum is declared with the <span class="interpreted">global</span> or <span class="interpreted">globalmask</span>
+attribute (described below).</p>
+<p>If the value for an enum constant is not specified, the default value
+is used. The default value is 0 for the first constant of the enum,
+or the value of the previous constant incremented by one for the
+following constants. It is allowed to have several constants with the
+same value in an enum.</p>
+<p>The following is an example of an enum declaration:</p>
+<pre class="literal-block">
+[global] enum TestEnum { ZERO, FOUR=4, FIVE, SIX, ELEVEN=0xA, TWENTY=$14 };
+</pre>
+</div>
+<div class="section" id="aliases">
+<h2><a class="toc-backref" href="#id6" name="aliases">2.4   Aliases</a></h2>
+<p>Aliases allow you to create your own data types, derived from one
+of the standard Structorian data types. When you define an alias,
+you specify the name of the derived type, the name of the base type
+and the set of attributes that should be applied to the base type.</p>
+<p>An alias has the following syntax:</p>
+<blockquote>
+<p>[<em>attributes</em>] <strong>alias</strong> [<em>attributes</em>] <em>baseType</em> [<em>attributes</em>] <em>derivedType</em> <tt class="literal"><span class="pre">;</span></tt></p>
+<p><em>baseType</em> = <em>string</em></p>
+<p><em>derivedType</em> = <em>string</em></p>
+</blockquote>
+<p>Type names are case-insensitive and must be unique. You may not
+define an alias with the same name as the name of a built-in type.</p>
+<p>The following is an example of an alias declaration:</p>
+<pre class="literal-block">
+alias str [len=8] resref;
+</pre>
+<p>When such an alias is defined, the following field declarations are
+equivalent:</p>
+<pre class="literal-block">
+str [len=8] Signature;
+resref Signature;
+</pre>
+<p>Attributes specified in the field declaration of an alias type override
+the attributes specified in the alias declaration. Therefore, the
+following definitions are equivalent:</p>
+<pre class="literal-block">
+str [len=16] Signature;
+resref [len=16] Signature;
+</pre>
+</div>
+<div class="section" id="includes">
+<h2><a class="toc-backref" href="#id7" name="includes">2.5   Includes</a></h2>
+<p>An include declaration allows you to include the contents of another
+structure file in the current file. It has the following syntax:</p>
+<blockquote>
+<p><strong>include</strong> <em>fileName</em> <tt class="literal"><span class="pre">;</span></tt></p>
+<p><em>fileName</em> = <em>string</em></p>
+</blockquote>
+<p>If <em>fileName</em> is not a full pathname, it is treated as a pathname
+relative to the file containing the include declaration.</p>
+<p>Recursive includes are not allowed. Struct and enum names must be
+unique within all included files. Therefore, if the file A has a
+definition of the structure S and the file B also has a definition
+of the structure S, and B is included in A, a duplicate structure name
+error will be reported.</p>
+</div>
+</div>
+<div class="section" id="field-types-and-attributes">
+<h1><a class="toc-backref" href="#id8" name="field-types-and-attributes">3   Field Types and Attributes</a></h1>
+<div class="section" id="struct-attributes">
+<h2><a class="toc-backref" href="#id9" name="struct-attributes">3.1   Struct Attributes</a></h2>
+<p>The following attributes can be specified for struct blocks:</p>
+<p><strong>filemask</strong> = <em>string</em></p>
+<blockquote>
+<p>Specifies the files for which the structure is applied by
+default. When a file is opened and the structure definition
+file is not loaded, or when a file name is specified on the
+command line, Structorian scans its home directory and all
+its subdirectories for structure definition files (<tt class="literal"><span class="pre">*.strs</span></tt>).
+It tries to load all those files, and as soon as it finds
+a structure with <span class="interpreted">filemask</span> matching the name of the data file,
+it loads the structure definition file containing that structure
+and applies it at the offset 0 of the data file.</p>
+<p>The value of this attribute is a standard DOS file mask or
+a list of file masks separated with semicolons.</p>
+<p>Example:</p>
+<pre class="literal-block">
+[filemask=&quot;t-hist.$*&quot;] struct &quot;History file 2603&quot;
+</pre>
+</blockquote>
+<p><strong>hidden</strong> = 1|0</p>
+<blockquote>
+Structures for which the <span class="interpreted">hidden</span> attribute is set are not shown
+in the &quot;Select structure&quot; dialog.</blockquote>
+<p><strong>preload</strong> = 1|0</p>
+<blockquote>
+<p>This attribute controls the structure loading order. Normally,
+Structorian loads the data for a structure only when it is
+selected in the structure tree (or shown in the table view).
+Before the structure is loaded, it is shown as just a name in the
+tree. The [+] sign is shown before the name if the structure
+contains child fields.</p>
+<p>If the <span class="interpreted">preload</span> attribute is specified, when a structure is
+loaded, its immediate children are loaded as well. (The
+preloading does not go deeper: if the immediate children have
+the <span class="interpreted">preload</span> attribute, the grandchildren are not loaded at
+the same time.)</p>
+<p>The <span class="interpreted">preload</span> attribute is helpful when the child structures
+can have varying names (the <span class="interpreted">include [replace]</span> field or the
+<span class="interpreted">nodename</span> field is used), or when the presence of children
+in the child structures is determined dynamically. In these
+cases, using <span class="interpreted">preload</span> allows to reduce the number of visible
+changes happening in the structure tree as the structures are
+loaded.</p>
+</blockquote>
+<p><strong>tableview</strong> = 1|0</p>
+<blockquote>
+If the <span class="interpreted">tableview</span> attribute is specified, the table view for
+the structure is opened automatically when the structure is
+selected. (If there is already a table view open when the
+structure is selected, it is not replaced.) The <span class="interpreted">tableview</span>
+attribute is convenient for structures that are best viewed
+in the table view - structures that have few fields and a
+large number of instances in the file.</blockquote>
+<p><strong>fieldlike</strong> = 1|0</p>
+<blockquote>
+<p>The <span class="interpreted">fieldlike</span> attribute is designed to be used in structures
+which consist of only one field and are most commonly used by
+including in other structures. If the <span class="interpreted">fieldlike</span> attribute is
+set, and the structure is included as a named include, the names
+of all fields in the structure are replaced with the include
+tag, and not appended to it.</p>
+<p>Consider the following example:</p>
+<pre class="literal-block">
+[hidden,fieldlike]
+struct VarInt
+{
+  [hidden] u8 b0;
+  local result [value=b0];
+  if (b0 &amp; 0x80 != 0)
+  {
+    [hidden] u8 b1;
+    local result [value=(((b0 &amp; 0x7F) &lt;&lt; 7) | b1)];
+  }
+  calc VarInt [value=result];
+}
+</pre>
+<p>As you can see, this structure represents a variable-length
+integer (taking up one or two bytes, depending on the value of
+the first byte), and has only one visible field - <span class="interpreted">result</span>.</p>
+<p>The following example demonstrates a possible use of that
+structure:</p>
+<pre class="literal-block">
+include VarInt [tag=time];
+</pre>
+<p>If the <span class="interpreted">VarInt</span> structure did not have the <span class="interpreted">fieldlike</span> attribute,
+the field produced by this declaration would be shown as
+<span class="interpreted">time.result</span>. However, there is no real need to show the name of
+the VarInt structure field. Thus, the <span class="interpreted">VarInt</span> structure uses the
+<span class="interpreted">fieldlike</span> attribute, which causes the field name to be displayed
+as simply <span class="interpreted">time</span>.</p>
+</blockquote>
+<p><strong>byteorder</strong> = bigendian | littleendian | motorola | intel</p>
+<blockquote>
+This attribute specifies whether the integer fields in the structure
+use the Intel (little-endian) or Motorola (big-endian) byte order.
+If the attribute is not specified, the Intel byte order is assumed.
+The byte order is inherited by included structures, but not by child
+structures.</blockquote>
+</div>
+<div class="section" id="enum-attributes">
+<h2><a class="toc-backref" href="#id10" name="enum-attributes">3.2   Enum Attributes</a></h2>
+<p>The following attributes can be specified for enum blocks:</p>
+<p><strong>global</strong> = 1|0</p>
+<blockquote>
+<p>If the <span class="interpreted">global</span> attribute is specified, all the constants in
+the enum are registered as global variables. This allows to
+use the constants in expressions.</p>
+<p>Example:</p>
+<pre class="literal-block">
+[global] enum PEResourceType { RT_CURSOR=1, RT_BITMAP, RT_ICON, RT_MENU }
+...
+enum16 ResType [enum=PEResourceType];
+...
+switch (Parent.ResType)
+{
+    case (RT_BITMAP) { child BITMAPINFOHEADER [offset=ResOffset]; }
+    case (RT_MENU)   { child MENUHEADER [offset=ResOffset]; }
+    ...
+}
+</pre>
+</blockquote>
+<p><strong>globalmask</strong> = 1|0</p>
+<blockquote>
+<p>If the <span class="interpreted">globalmask</span> attribute is specified, all the constants
+in the enum are registered as global variables with values
+equal to the respective bit masks. So, for a constant with
+value 0, the global with value 1 is registered, for constant 1 -
+global 2, for constant 2 - global 4, and so on. This allows to use
+the constants as bit masks in expressions.</p>
+<p>Example:</p>
+<pre class="literal-block">
+[globalmask] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, DS_SETFONT=6, ... }
+...
+set32 dwStyle [enum=DialogStyle];
+if (dwStyle &amp; DS_SETFONT)
+{
+    ...
+}
+</pre>
+<p>In this example, the value of the global variable DS_SETFONT is 32 (2^6).</p>
+<p>The <span class="interpreted">globalmask</span> and <span class="interpreted">global</span> attributes are mutually exclusive:
+if both are specified, only the <span class="interpreted">globalmask</span> is actually processed.</p>
+</blockquote>
+<p><strong>inherit</strong> = <em>enumName</em></p>
+<blockquote>
+<p>When the <span class="interpreted">inherit</span> attribute is specified, all the constants in the
+enum <em>enumName</em> are added to the enum. The enum <em>enumName</em> must be
+defined earlier in the file.</p>
+<p>Note that if the enum <em>enumName</em> does not have the <span class="interpreted">global</span> or
+<span class="interpreted">globalmask</span> attribute, the constants in it are not registered as
+globals, even if the inheriting enum does have one of these
+attributes. It is allowed to specify <span class="interpreted">inherit</span> multiple times,
+to inherit constants from multiple enum definitions.</p>
+<p>Example:</p>
+<pre class="literal-block">
+enum WindowStyle { WS_TABSTOP=16, WS_GROUP, ... }
+[inherit=WindowStyle] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, ... }
+</pre>
+</blockquote>
+</div>
+<div class="section" id="common-field-attributes">
+<h2><a class="toc-backref" href="#id11" name="common-field-attributes">3.3   Common Field Attributes</a></h2>
+<p>The following attributes are common for all field types:</p>
+<p><strong>tag</strong> = <em>string</em>   (default attribute)</p>
+<blockquote>
+The field tag is its name that is shown to the user. It is shown
+in the field view and in the column captions of the table view.
+For hidden fields, the tag value is ignored. If the tag doesn't
+contain spaces or other characters that require string quoting,
+it can also be used to refer to the field in expressions.
+If the tag is not specified, the default tag &quot;Unknown&quot; is used.</blockquote>
+<p><strong>id</strong> = <em>string</em></p>
+<blockquote>
+<p>The field ID is used to refer to the field in expressions.
+It should be specified only if the tag contains spaces or other
+characters that require string quoting.</p>
+<p>Example:</p>
+<pre class="literal-block">
+i32 &quot;BIFF count&quot; [id=BIFFCount];
+</pre>
+</blockquote>
+<p><strong>hidden</strong> = 1|0</p>
+<blockquote>
+<p>Fields that have the <span class="interpreted">hidden</span> attribute are not shown to the user.
+This attribute can be used for various marker or offset fields.</p>
+<p>Example:</p>
+<pre class="literal-block">
+[hidden] str [len=2] PESignature;
+if (PESignature == &quot;PE&quot;)
+{
+  child PEHeader [offset=NewHdrOffset];
+}
+</pre>
+</blockquote>
+<p><strong>readonly</strong> = 1|0</p>
+<blockquote>
+You can set a <span class="interpreted">readonly</span> attribute on a field to disallow editing
+this field. This can be helpful for fields that cannot be changed
+without corrupting the structure of the file, like various offset
+fields.</blockquote>
+</div>
+<div class="section" id="integer-fields">
+<h2><a class="toc-backref" href="#id12" name="integer-fields">3.4   Integer Fields</a></h2>
+<p>Integer fields are probably the most commonly used field types in
+Structorian.  All integer fields can be used in expressions.</p>
+<p>The following integer field types are supported:</p>
+<table class="table" frame="border" rules="all">
+<colgroup>
+<col width="13%" />
+<col width="87%" />
+</colgroup>
+<tbody valign="top">
+<tr><td>i</td>
+<td>Signed decimal numbers</td>
+</tr>
+<tr><td>u</td>
+<td>Unsigned decimal numbers</td>
+</tr>
+<tr><td>x</td>
+<td>Hexadecimal numbers</td>
+</tr>
+<tr><td>bits</td>
+<td>Binary numbers</td>
+</tr>
+<tr><td>enum</td>
+<td>Enums</td>
+</tr>
+<tr><td>set</td>
+<td>Sets</td>
+</tr>
+</tbody>
+</table>
+<p>The following attributes are common for all integer field types:</p>
+<p><strong>size</strong> = 1 | 2 | 4</p>
+<blockquote>
+Specifies the size of the integer field in bytes. For each field
+type, a number of standard aliases is registered for each possible
+field size. For example, the types <span class="interpreted">i8</span>, <span class="interpreted">i16</span> and <span class="interpreted">i32</span> can be
+used instead of <span class="interpreted">i [size=1]</span>, <span class="interpreted">i [size=2]</span> and <span class="interpreted">i [size=4]</span>.</blockquote>
+<p><strong>value</strong> = <em>expression</em></p>
+<blockquote>
+<p>Specifies the expression that is evaluated to obtain the value
+of the field. If the <span class="interpreted">value</span> attribute is specified, the field
+does not consume any bytes from the data file, and the <span class="interpreted">size</span>
+attribute must not be specified.</p>
+<p>Here is an example of using a calculated hexadecimal field:</p>
+<pre class="literal-block">
+[hidden] u8 _lsb;
+[hidden] u8 _msb;
+x wheel_value [value=(_lsb + (_msb &lt;&lt; 7))];
+</pre>
+</blockquote>
+<p>Integer fields can also be used within bitfields (described in detail
+below, with examples). For fields within bitfields, the following
+attributes must be specified:</p>
+<p><strong>frombit</strong> = <em>number</em></p>
+<blockquote>
+Starting bit of the value. Must be within range from 0 to the
+size of the containing bitfield minus one.</blockquote>
+<p><strong>tobit</strong> = <em>number</em></p>
+<blockquote>
+Ending bit of the value. Must be within range from the
+<span class="interpreted">frombit</span> value to the size of the containing bitfield minus one.
+For a value that occupies 1 bit, the <span class="interpreted">frombit</span> and <span class="interpreted">tobit</span> values
+should be equal.</blockquote>
+<p>For <span class="interpreted">i</span>, <span class="interpreted">u</span>, <span class="interpreted">x</span>, and <span class="interpreted">bits</span> fields no other attributes are supported.
+The <span class="interpreted">i</span>, <span class="interpreted">u</span> and <span class="interpreted">x</span> fields are shown as decimal or hexadecimal numbers,
+and the <span class="interpreted">bits</span> fields are shown as a sequence of binary digits with the
+specified size. For <span class="interpreted">enum</span> and <span class="interpreted">set</span> fields, however, an additional
+attribute is required:</p>
+<p><strong>enum</strong> = <em>enumName</em>   (required)</p>
+<blockquote>
+<p>Specifies the name of the enum used to interpret the value. It is
+not required that the enum should be defined before the field
+declaration in the file.</p>
+<p>When an enum field is loaded, Structorian searches the enum
+definition for a constant that has a value equal to the value
+loaded from the data file. If such a constant is found, the name
+of the constant is displayed. If the constant is not found,
+the loaded value is shown as a number and highlighted with
+the unknown data color.</p>
+<p>When a set field is loaded, Structorian loops through all nonzero
+bits in the loaded value. For each nonzero bit, it searches for
+a constant with the value equal to the index of the bit.
+If the constant is found, its name is appended to the displayed
+field value. Otherwise, Structorian adds <tt class="literal"><span class="pre">&lt;bitN&gt;</span></tt> to the
+displayed field value, where N is the index of the bit,
+and highlights the value with the unknown data color.</p>
+<p>This is best illustrated by an example. Consider the following
+definitions:</p>
+<pre class="literal-block">
+enum WorldMapAreaFlags { Visible, &quot;Can be visited&quot;=2, Visited }
+...
+set32 Flags [enum=WorldMapAreaFlags];
+</pre>
+<p>If the value loaded from the data file is equal to 0, Structorian
+will just show an empty value in the cell, since no bits are set.</p>
+<p>If the loaded value is 1, Structorian will show &quot;Visible&quot;.
+The bit with the index 0 is set, so Structorian displays the name
+of the constant with the value 0.</p>
+<p>Now suppose the loaded value is 7. The bits with the indexes
+0, 1, 2 are set in the value. However, there are only constants
+with values 0 and 2; there is no constant for the value 1.
+Therefore, Structorian will display &quot;Visible, &lt;bit1&gt;,
+Can be visited&quot; and highlight the field in blue.</p>
+</blockquote>
+</div>
+<div class="section" id="string-fields">
+<h2><a class="toc-backref" href="#id13" name="string-fields">3.5   String Fields</a></h2>
+<p>A string is a sequence of characters that either has a fixed length
+(static or calculated as a result of an expression) or is terminated
+with a null byte. Structorian supports both ASCII and Unicode strings.
+String values can also be used in expressions. Details on using strings
+in expressions are described below, in the section on expression syntax.</p>
+<p>The following string types are supported:</p>
+<table class="table" frame="border" rules="all">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr><td>str</td>
+<td>ASCII string</td>
+</tr>
+<tr><td>cstr</td>
+<td>Null-terminated ASCII string</td>
+</tr>
+<tr><td>wstr</td>
+<td>Unicode string</td>
+</tr>
+<tr><td>char</td>
+<td>ASCII character (alias for <strong>str [len=1]</strong>)</td>
+</tr>
+<tr><td>wchar</td>
+<td>Unicode character (alias for <strong>wstr [len=1]</strong>)</td>
+</tr>
+</tbody>
+</table>
+<p>The following attributes are common to all string types:</p>
+<p><strong>len</strong> = <em>expression</em></p>
+<blockquote>
+<p>Specifies the length of the string in characters. If this attribute
+is not specified, the string continues until the following null
+character or until the end of file.</p>
+<p>Actually, both <strong>str</strong> and <strong>cstr</strong> fields will read as many bytes as
+specified by the <span class="interpreted">[len]</span> attribute, and will stop at the first null
+character encountered. The only difference between them is their
+behavior when editing. For a <strong>str</strong> field of length N, it is allowed
+to enter exactly N characters. On the other hand, for a <strong>cstr</strong> field
+of length N, only N-1 characters can be entered, and the Nth character
+will always be the terminating null byte. <strong>wstr</strong> fields behave like
+<strong>str</strong> fields, and do not enforce the terminating null character.</p>
+</blockquote>
+<p><strong>value</strong> = <em>expression</em></p>
+<blockquote>
+Specifies the expression that is evaluated to obtain the value
+of the field. If the <span class="interpreted">value</span> attribute is specified, the field
+does not consume any bytes from the data file, and the <span class="interpreted">len</span>
+attribute must not be specified.</blockquote>
+</div>
+</div>
+</div>
+</body>
+</html>

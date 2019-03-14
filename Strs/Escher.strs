@@ -1,0 +1,48 @@
+struct MSOFBH
+{
+  bitfield(4)
+  {
+    i32 ver [frombit=0, tobit=3];
+    i32 inst [frombit=4, tobit=15];
+    enum32 fbt [enum=FBTType, frombit=16, tobit=31];
+  }
+  u32 cbLength;
+  if (ver == 0xF)
+  {
+    child MSOFBH [offset=curoffset];
+    if (fbt == 0xF000)
+    {
+      sibling MSOFBH [offset=curoffset+cbLength+1];
+    }
+    else
+    {
+      sibling MSOFBH [offset=curoffset+cbLength];
+    }
+  }
+  else
+  {
+    if (curoffset+cbLength < Parent.StructOffset + Parent.cbLength)
+    {
+      sibling MSOFBH [offset=curoffset+cbLength];
+    }
+  }
+}
+
+enum FBTType
+{
+  DggContainer = 0xF000,
+  DgContainer     = 0xF002,
+  SpgrContainer   = 0xF003,
+  SpContainer     = 0xF004,
+  SolverContainer = 0xF005,
+  Dgg             = 0xF006,
+  Dg              = 0xF008,
+  Spgr            = 0xF009,
+  Sp              = 0xF00A,
+  OPT             = 0xF00B,
+  ChildAnchor     = 0xF00F,
+  ClientAnchor    = 0xF010,
+  ClientData      = 0xF011,
+  ArcRule         = 0xF014,
+  SplitMenuColors = 0xF11E,
+}

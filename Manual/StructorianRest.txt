@@ -1,0 +1,592 @@
+Structorian Script Reference (REST)
+===================================
+
+.. sectnum::
+
+.. contents::
+
+Overall Script Syntax
+---------------------
+
+The Structorian script is a text file in the ANSI codepage. The file
+is processed as a sequence of tokens. Whitespace characters (spaces,
+tabs and line breaks) are used to separate tokens, but carry no semantic
+value.
+
+Structorian scripts may include end-of-line comments. Like in C++, a
+comment starts with the characters ``//`` and continues till the end of the
+line.
+
+The main token types used in Structorian scripts are strings and numbers.
+
+Strings can be specified "as is", without any delimiters, if they start
+with one of the following characters::
+
+  'A'..'Z', 'a'..'z', '_', '0'..'9', '-'
+
+and the characters after the first are in the following set::
+
+  'A'..'Z', 'a'..'z', '_', '0'..'9', '+', '-', '*', '/', '!', '<', '>', '&', '|', '.'
+
+If a string contains other characters (for example, spaces), it must be
+enclosed in parentheses or quotation marks. By convention, expressions
+are enclosed in parentheses, and user-visible strings (like field tags)
+are enclosed in quotation marks. However, the parsing code handles both
+cases in the same way. No means are provided for escaping quotation marks,
+so if you need to have a field tag containing quotation marks, it should
+be enclosed in parentheses.
+
+The following lines are examples of valid strings::
+
+  Signature
+  "Size of header in paragraphs"
+  (RawData + Parent.ExportDirVA - VA)
+
+Numbers can be specified in decimal or hexadecimal form. Hexadecimal numbers
+are prefixed with either ``$`` or ``0x``. The following lines are examples of
+valid numbers::
+
+  256
+  0xFF
+  $1234
+
+
+Script Structure
+----------------
+
+The top-level elements of scripts are called *blocks*. Currently
+there are four types of blocks: `struct`, `enum`, `alias` and `include`.
+
+Struct Blocks
+~~~~~~~~~~~~~
+
+A struct block has the following syntax:
+
+  [*attributes*] **struct** [*attributes*] *structName* [*attributes*] ``{`` [*field*] ``}``
+
+  *structName* = *string*
+
+The string following the **struct** keyword is the name of the structure.
+The name is case-insensitive and must be unique within the structure file.
+
+The *attributes* declaration has the following syntax:
+
+  ``[`` *attrName* [= *attrValue* ][ ``,`` *attrName* [= *attrValue* ]]... ``]``
+
+  *attrName* = *string*
+
+  *attrValue* = *string*
+
+If the attribute value is omitted, it is assumed that the value of the
+attribute is "1". Attribute names are case-sensitive. All attribute
+declarations for a structure or field are merged, and the location of
+the attribute is irrelevant. It is allowed to specify the same attribute
+multiple times, however, only the latest specified value is actually used.
+
+Only the attributes supported by the respective block or field type can
+be used in an attributes block. Using other attributes is an error.
+
+The following lines are examples of valid structure blocks. These
+definitions are equivalent. ::
+
+  [hidden] struct TestStruct { u16 TestField; }
+  struct [hidden=1] "TestStruct" { u16 TestField; }
+
+
+Field Declarations
+~~~~~~~~~~~~~~~~~~
+
+A field declaration has the following syntax:
+
+  [*attributes*] *fieldType* [*attributes*] [*defaultAttribute*] [*attributes*] ``;``
+
+  *fieldType* = *string*
+
+  *defaultAttribute* = *string*
+
+The declaration of field attributes has the same syntax as the declaration
+of the structure attributes.
+
+*fieldType* must be either one of the built-in field types or one of the
+aliases defined prior to the definition of the structure using the alias.
+
+*defaultAttribute* specifies the value of the default attribute of the
+structure. The default attribute depends on the field type. For most
+visible field types, the default attribute is `tag`.
+
+The declaration of a container field, which contains other fields, has the
+following syntax:
+
+  [*attributes*] *fieldType* [*attributes*] [*defaultAttribute*] [*attributes*] ``{`` [*field*]... ``}``
+
+The following lines are examples of valid field declarations. These
+definitions are equivalent. The preferred form is the first one. ::
+
+  [readonly] u16 Signature;
+  u16 [readonly=1, tag="Signature"];
+  u16 (Signature) [readonly="1"];
+
+The following container field declarations are also equivalent. Again,
+the first form is preferred. Note that `expr` is the default attribute
+for the **if** field. ::
+
+  if (PESignature == "PE") { message "Found a PE header"; }
+  [expr=(PESignature == "PE")] if { message (Found a PE header); }
+
+
+Enum Blocks
+~~~~~~~~~~~
+
+An enum block has the following syntax:
+
+  [*attributes*] **enum** [*attributes*] *enumName* [*attributes*] { *constName* [``=`` *constValue*][``,`` *constName* [``=`` *constValue*]... ``}``
+
+  *enumName* = *string*
+
+  *constName* = *string*
+
+  *constValue* = *number*
+
+Names of enum types are case-insensitive and must be unique within
+the file. Names of constants within an enum are not required to be
+unique, unless the enum is declared with the `global` or `globalmask`
+attribute (described below).
+
+If the value for an enum constant is not specified, the default value
+is used. The default value is 0 for the first constant of the enum,
+or the value of the previous constant incremented by one for the
+following constants. It is allowed to have several constants with the
+same value in an enum.
+
+The following is an example of an enum declaration::
+
+  [global] enum TestEnum { ZERO, FOUR=4, FIVE, SIX, ELEVEN=0xA, TWENTY=$14 };
+
+
+Aliases
+~~~~~~~
+
+Aliases allow you to create your own data types, derived from one
+of the standard Structorian data types. When you define an alias,
+you specify the name of the derived type, the name of the base type
+and the set of attributes that should be applied to the base type.
+
+An alias has the following syntax:
+
+  [*attributes*] **alias** [*attributes*] *baseType* [*attributes*] *derivedType* ``;``
+
+  *baseType* = *string*
+
+  *derivedType* = *string*
+
+Type names are case-insensitive and must be unique. You may not
+define an alias with the same name as the name of a built-in type.
+
+The following is an example of an alias declaration::
+
+  alias str [len=8] resref;
+
+When such an alias is defined, the following field declarations are
+equivalent::
+
+  str [len=8] Signature;
+  resref Signature;
+
+Attributes specified in the field declaration of an alias type override
+the attributes specified in the alias declaration. Therefore, the
+following definitions are equivalent::
+
+  str [len=16] Signature;
+  resref [len=16] Signature;
+
+
+Includes
+~~~~~~~~
+
+An include declaration allows you to include the contents of another
+structure file in the current file. It has the following syntax:
+
+  **include** *fileName* ``;``
+
+  *fileName* = *string*
+
+If *fileName* is not a full pathname, it is treated as a pathname
+relative to the file containing the include declaration.
+
+Recursive includes are not allowed. Struct and enum names must be
+unique within all included files. Therefore, if the file A has a
+definition of the structure S and the file B also has a definition
+of the structure S, and B is included in A, a duplicate structure name
+error will be reported.
+
+
+Field Types and Attributes
+--------------------------
+
+Struct Attributes
+~~~~~~~~~~~~~~~~~
+
+The following attributes can be specified for struct blocks:
+
+**filemask** = *string*
+
+    Specifies the files for which the structure is applied by
+    default. When a file is opened and the structure definition
+    file is not loaded, or when a file name is specified on the
+    command line, Structorian scans its home directory and all
+    its subdirectories for structure definition files (``*.strs``).
+    It tries to load all those files, and as soon as it finds
+    a structure with `filemask` matching the name of the data file,
+    it loads the structure definition file containing that structure
+    and applies it at the offset 0 of the data file.
+
+    The value of this attribute is a standard DOS file mask or
+    a list of file masks separated with semicolons.
+
+    Example::
+
+      [filemask="t-hist.$*"] struct "History file 2603"
+
+**hidden** = 1|0
+
+    Structures for which the `hidden` attribute is set are not shown
+    in the "Select structure" dialog.
+
+**preload** = 1|0
+
+    This attribute controls the structure loading order. Normally,
+    Structorian loads the data for a structure only when it is
+    selected in the structure tree (or shown in the table view).
+    Before the structure is loaded, it is shown as just a name in the
+    tree. The [+] sign is shown before the name if the structure
+    contains child fields.
+
+    If the `preload` attribute is specified, when a structure is
+    loaded, its immediate children are loaded as well. (The
+    preloading does not go deeper: if the immediate children have
+    the `preload` attribute, the grandchildren are not loaded at
+    the same time.)
+
+    The `preload` attribute is helpful when the child structures
+    can have varying names (the `include [replace]` field or the
+    `nodename` field is used), or when the presence of children
+    in the child structures is determined dynamically. In these
+    cases, using `preload` allows to reduce the number of visible
+    changes happening in the structure tree as the structures are
+    loaded.
+
+**tableview** = 1|0
+
+    If the `tableview` attribute is specified, the table view for
+    the structure is opened automatically when the structure is
+    selected. (If there is already a table view open when the
+    structure is selected, it is not replaced.) The `tableview`
+    attribute is convenient for structures that are best viewed
+    in the table view - structures that have few fields and a
+    large number of instances in the file.
+
+**fieldlike** = 1|0
+
+    The `fieldlike` attribute is designed to be used in structures
+    which consist of only one field and are most commonly used by
+    including in other structures. If the `fieldlike` attribute is
+    set, and the structure is included as a named include, the names
+    of all fields in the structure are replaced with the include
+    tag, and not appended to it.
+
+    Consider the following example::
+
+      [hidden,fieldlike]
+      struct VarInt
+      {
+        [hidden] u8 b0;
+        local result [value=b0];
+        if (b0 & 0x80 != 0)
+        {
+          [hidden] u8 b1;
+          local result [value=(((b0 & 0x7F) << 7) | b1)];
+        }
+        calc VarInt [value=result];
+      }
+
+    As you can see, this structure represents a variable-length
+    integer (taking up one or two bytes, depending on the value of
+    the first byte), and has only one visible field - `result`.
+
+    The following example demonstrates a possible use of that
+    structure::
+
+      include VarInt [tag=time];
+
+    If the `VarInt` structure did not have the `fieldlike` attribute,
+    the field produced by this declaration would be shown as
+    `time.result`. However, there is no real need to show the name of
+    the VarInt structure field. Thus, the `VarInt` structure uses the
+    `fieldlike` attribute, which causes the field name to be displayed
+    as simply `time`.
+
+**byteorder** = bigendian | littleendian | motorola | intel
+
+    This attribute specifies whether the integer fields in the structure
+    use the Intel (little-endian) or Motorola (big-endian) byte order.
+    If the attribute is not specified, the Intel byte order is assumed.
+    The byte order is inherited by included structures, but not by child
+    structures.
+
+
+Enum Attributes
+~~~~~~~~~~~~~~~
+
+The following attributes can be specified for enum blocks:
+
+**global** = 1|0
+
+    If the `global` attribute is specified, all the constants in
+    the enum are registered as global variables. This allows to
+    use the constants in expressions.
+
+    Example::
+
+      [global] enum PEResourceType { RT_CURSOR=1, RT_BITMAP, RT_ICON, RT_MENU }
+      ...
+      enum16 ResType [enum=PEResourceType];
+      ...
+      switch (Parent.ResType)
+      {
+          case (RT_BITMAP) { child BITMAPINFOHEADER [offset=ResOffset]; }
+          case (RT_MENU)   { child MENUHEADER [offset=ResOffset]; }
+          ...
+      }
+
+**globalmask** = 1|0
+
+    If the `globalmask` attribute is specified, all the constants
+    in the enum are registered as global variables with values
+    equal to the respective bit masks. So, for a constant with
+    value 0, the global with value 1 is registered, for constant 1 -
+    global 2, for constant 2 - global 4, and so on. This allows to use
+    the constants as bit masks in expressions.
+
+    Example::
+
+      [globalmask] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, DS_SETFONT=6, ... }
+      ...
+      set32 dwStyle [enum=DialogStyle];
+      if (dwStyle & DS_SETFONT)
+      {
+          ...
+      }
+
+    In this example, the value of the global variable DS_SETFONT is 32 (2^6).
+
+    The `globalmask` and `global` attributes are mutually exclusive:
+    if both are specified, only the `globalmask` is actually processed.
+
+**inherit** = *enumName*
+
+    When the `inherit` attribute is specified, all the constants in the
+    enum *enumName* are added to the enum. The enum *enumName* must be
+    defined earlier in the file.
+
+    Note that if the enum *enumName* does not have the `global` or
+    `globalmask` attribute, the constants in it are not registered as
+    globals, even if the inheriting enum does have one of these
+    attributes. It is allowed to specify `inherit` multiple times,
+    to inherit constants from multiple enum definitions.
+
+    Example::
+
+      enum WindowStyle { WS_TABSTOP=16, WS_GROUP, ... }
+      [inherit=WindowStyle] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, ... }
+
+
+Common Field Attributes
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following attributes are common for all field types:
+
+**tag** = *string*   (default attribute)
+
+    The field tag is its name that is shown to the user. It is shown
+    in the field view and in the column captions of the table view.
+    For hidden fields, the tag value is ignored. If the tag doesn't
+    contain spaces or other characters that require string quoting,
+    it can also be used to refer to the field in expressions.
+    If the tag is not specified, the default tag "Unknown" is used.
+
+**id** = *string*
+
+    The field ID is used to refer to the field in expressions.
+    It should be specified only if the tag contains spaces or other
+    characters that require string quoting.
+
+    Example::
+
+      i32 "BIFF count" [id=BIFFCount];
+
+**hidden** = 1|0
+
+    Fields that have the `hidden` attribute are not shown to the user.
+    This attribute can be used for various marker or offset fields.
+
+    Example::
+
+      [hidden] str [len=2] PESignature;
+      if (PESignature == "PE")
+      {
+        child PEHeader [offset=NewHdrOffset];
+      }
+
+**readonly** = 1|0
+
+    You can set a `readonly` attribute on a field to disallow editing
+    this field. This can be helpful for fields that cannot be changed
+    without corrupting the structure of the file, like various offset
+    fields.
+
+
+Integer Fields
+~~~~~~~~~~~~~~
+
+Integer fields are probably the most commonly used field types in
+Structorian.  All integer fields can be used in expressions.
+
+The following integer field types are supported:
+
+====  ===========================
+i     Signed decimal numbers
+u     Unsigned decimal numbers
+x     Hexadecimal numbers
+bits  Binary numbers
+enum  Enums
+set   Sets
+====  ===========================
+
+The following attributes are common for all integer field types:
+
+**size** = 1 | 2 | 4
+
+    Specifies the size of the integer field in bytes. For each field
+    type, a number of standard aliases is registered for each possible
+    field size. For example, the types `i8`, `i16` and `i32` can be
+    used instead of `i [size=1]`, `i [size=2]` and `i [size=4]`.
+
+**value** = *expression*
+
+    Specifies the expression that is evaluated to obtain the value
+    of the field. If the `value` attribute is specified, the field
+    does not consume any bytes from the data file, and the `size`
+    attribute must not be specified.
+
+    Here is an example of using a calculated hexadecimal field::
+
+      [hidden] u8 _lsb;
+      [hidden] u8 _msb;
+      x wheel_value [value=(_lsb + (_msb << 7))];
+
+Integer fields can also be used within bitfields (described in detail
+below, with examples). For fields within bitfields, the following
+attributes must be specified:
+
+**frombit** = *number*
+
+    Starting bit of the value. Must be within range from 0 to the
+    size of the containing bitfield minus one.
+
+**tobit** = *number*
+
+    Ending bit of the value. Must be within range from the
+    `frombit` value to the size of the containing bitfield minus one.
+    For a value that occupies 1 bit, the `frombit` and `tobit` values
+    should be equal.
+
+For `i`, `u`, `x`, and `bits` fields no other attributes are supported.
+The `i`, `u` and `x` fields are shown as decimal or hexadecimal numbers,
+and the `bits` fields are shown as a sequence of binary digits with the
+specified size. For `enum` and `set` fields, however, an additional
+attribute is required:
+
+**enum** = *enumName*   (required)
+
+    Specifies the name of the enum used to interpret the value. It is
+    not required that the enum should be defined before the field
+    declaration in the file.
+
+    When an enum field is loaded, Structorian searches the enum
+    definition for a constant that has a value equal to the value
+    loaded from the data file. If such a constant is found, the name
+    of the constant is displayed. If the constant is not found,
+    the loaded value is shown as a number and highlighted with
+    the unknown data color.
+
+    When a set field is loaded, Structorian loops through all nonzero
+    bits in the loaded value. For each nonzero bit, it searches for
+    a constant with the value equal to the index of the bit.
+    If the constant is found, its name is appended to the displayed
+    field value. Otherwise, Structorian adds ``<bitN>`` to the
+    displayed field value, where N is the index of the bit,
+    and highlights the value with the unknown data color.
+
+    This is best illustrated by an example. Consider the following
+    definitions::
+
+      enum WorldMapAreaFlags { Visible, "Can be visited"=2, Visited }
+      ...
+      set32 Flags [enum=WorldMapAreaFlags];
+
+    If the value loaded from the data file is equal to 0, Structorian
+    will just show an empty value in the cell, since no bits are set.
+
+    If the loaded value is 1, Structorian will show "Visible".
+    The bit with the index 0 is set, so Structorian displays the name
+    of the constant with the value 0.
+
+    Now suppose the loaded value is 7. The bits with the indexes
+    0, 1, 2 are set in the value. However, there are only constants
+    with values 0 and 2; there is no constant for the value 1.
+    Therefore, Structorian will display "Visible, <bit1>,
+    Can be visited" and highlight the field in blue.
+
+
+String Fields
+~~~~~~~~~~~~~
+
+A string is a sequence of characters that either has a fixed length
+(static or calculated as a result of an expression) or is terminated
+with a null byte. Structorian supports both ASCII and Unicode strings.
+String values can also be used in expressions. Details on using strings
+in expressions are described below, in the section on expression syntax.
+
+The following string types are supported:
+
+=====  ==================================================
+str    ASCII string
+cstr   Null-terminated ASCII string
+wstr   Unicode string
+char   ASCII character (alias for **str [len=1]**)
+wchar  Unicode character (alias for **wstr [len=1]**)
+=====  ==================================================
+
+The following attributes are common to all string types:
+
+**len** = *expression*
+
+    Specifies the length of the string in characters. If this attribute
+    is not specified, the string continues until the following null
+    character or until the end of file.
+
+    Actually, both **str** and **cstr** fields will read as many bytes as
+    specified by the `[len]` attribute, and will stop at the first null
+    character encountered. The only difference between them is their
+    behavior when editing. For a **str** field of length N, it is allowed
+    to enter exactly N characters. On the other hand, for a **cstr** field
+    of length N, only N-1 characters can be entered, and the Nth character
+    will always be the terminating null byte. **wstr** fields behave like
+    **str** fields, and do not enforce the terminating null character.
+
+**value** = *expression*
+
+    Specifies the expression that is evaluated to obtain the value
+    of the field. If the `value` attribute is specified, the field
+    does not consume any bytes from the data file, and the `len`
+    attribute must not be specified.

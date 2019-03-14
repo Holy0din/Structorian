@@ -1,0 +1,98 @@
+[filemask="*.dbx"]
+struct DBXFileHeader
+{
+  x32 Signature;
+  x32 CLSID;
+  repeat(5)
+  {
+    x32;
+  }
+  i32 FileInfoLength;
+  x32;
+  x32 LastVarSegmentOffset;
+  x32 VarSegmentLength;
+  x32 LastVarSegmentUsed;
+  x32 LastTreeSegmentOffset;
+  x32 TreeSegmentLength;
+  x32 LastTreeSegmentUsed;
+  x32 LastMessageSegmentOffset;
+  x32 MessageSegmentLength;
+  x32 LastMessageSegmentUsed;
+  x32 DeletedMessageListOffset;
+  x32 DeletedTreeListOffset;
+  x32;
+  x32 MiddleSectorUsedSpace;
+  x32 MiddleSectorReusableSpace;
+  i32 LastTreeEntryIndex;
+  x32;
+  x32;
+  x32;
+  x32 FirstFolderListNode;
+  x32 LastFolderListNode;
+  x32;
+  x32;
+  x32 UsedSpaceInFile;
+  x32;
+  x32;
+  x32 MessageConditionsOffset;
+  x32 FolderConditionsOffset;
+  skip(13*4);
+  x32 Tree1EntryCount;
+  x32 Tree2EntryCount;
+  x32 Tree3EntryCount;
+  skip(5*4);
+  x32 Tree1RootOffset;
+  x32 Tree2RootOffset;
+  x32 Tree3RootOffset;
+  skip(0x108-0xf0);
+  x32;
+  x32;
+  skip(0x27c-0x110);
+  x32 IndexedInfoUsedSpace;
+  x32 ConditionsUsedSpace;
+  x32;
+  x32 FolderListUsedSpace;
+  x32 TreeObjectsUsedSpace;
+  x32 MessageObjectsUsedSpace;
+  if (Tree1RootOffset != 0)
+  {
+    child DBXTreeNode [offset=Tree1RootOffset, group="Tree1"];
+  }
+}
+
+struct DBXTreeNode
+{
+  x32 ObjectMarker;
+  x32;
+  x32 ChildNodePtr;
+  x32 ParentNodePtr;
+  x8  NodeID;
+  x8  BodyEntryCount;
+  x16;
+  x32 ChildEntryCount;
+  repeat(BodyEntryCount)
+  {
+    x32 Offset;
+    child DBXIndexedInfo [offset=Offset, group="Messages"];
+    x32 ChildNodePtr;
+    x32 ChildEntryCount;
+  }
+}
+
+struct DBXIndexedInfo
+{
+  x32 ObjectMarker;
+  x32 BodyLength;
+  x16 ObjectLength;
+  u8  IndexEntryCount;
+  u8  ChangeCount;
+  repeat(IndexEntryCount)
+  {
+    bitfield(4)
+    {
+      i32 index [frombit=0, tobit=6];
+      i32 directValue [frombit=7, tobit=7];
+      i32 value [frombit=8, tobit=31];
+    }
+  }
+}

@@ -1,0 +1,375 @@
+// Morrowind structure definitions
+// Reverse-engineered by Dmitry Jemerov <yole@yole.ru>
+
+[filemask="*.esm;*.esp;*.ess"]
+struct MorrowindFile
+{
+  str [len=4] Signature;
+  u32;
+  child Chunk [offset=16];
+  local ChunkEndOffset [value=16];
+}
+
+struct Chunk
+{
+  str [len=4] Type;
+  nodename Type;
+  u32 DataSize;
+  if (Type == "SCPT" || Type == "CREA" || Type == "NPC_" || Type == "CELL" ||
+      Type == "DIAL" || Type == "INFO" || Type == "GLOB" || Type == "REGN" ||
+      Type == "STAT" || Type == "WEAP" || Type == "DOOR" || Type == "MISC" ||
+      Type == "CONT" || Type == "ACTI" || Type == "ENCH" || Type == "PGRD" ||
+      Type == "LTEX" || Type == "LAND" || Type == "BOOK")
+  {
+    local ChunkEndOffset [value=CurOffset+DataSize];
+    child Chunk [offset=CurOffset+8];
+    skip DataSize+8;
+  }
+  elif (Type == "NAME" || Type == "CNAM" || Type == "FNAM" || Type == "MAST" ||
+        Type == "MODL" || Type == "SCRI" || Type == "RNAM" || Type == "BNAM" ||
+        Type == "KNAM" || Type == "RGNN" || Type == "ITEX" || Type == "SNAM" ||
+        Type == "ANAM" || Type == "DNAM" || Type == "TEXT")
+  {
+    cstr Value [len=DataSize];
+  }
+  else
+  {
+    switch (Type)
+    {
+      case ("HEDR")
+      {
+        assert (DataSize == 0x12C);
+        x32;
+        x32;
+        cstr [len=32] Author;
+        cstr [len=256] Description;
+        u32;
+        local ChunkEndOffset [value=FileSize];
+        child Chunk;
+      }
+      case ("SCHD")
+      {
+        assert (DataSize == 52);
+        include SCHD;
+      }
+      case ("NPDT")
+      {
+        if (Parent.Type == "CREA")
+        {
+          assert (DataSize == 96);
+          include CREA_NPDT;
+        }
+        elif (Parent.Type == "NPC_")
+        {
+          if (DataSize == 52)
+          {
+            include NPC_NPDT_Full;
+          }
+          else
+          {
+            skip DataSize;
+          }
+        }
+        else
+        {
+          skip DataSize;
+        }
+      }
+      case ("NPCO")
+      {
+        assert (DataSize == 36);
+        include NPCO;
+      }
+      case ("NPCS")
+      {
+        assert (DataSize == 32);
+        str [len=32] Spell;
+      }
+      case ("AIDT")
+      {
+        assert (DataSize == 12);
+        include AIDT;
+      }
+      case ("AI_W")
+      {
+        assert (DataSize == 14);
+        include AI_W;
+      }
+      case ("WPDT")
+      {
+        assert (DataSize == 32);
+        include WPDT;
+      }
+      case ("MCDT")
+      {
+        assert (DataSize == 12);
+        include MCDT;
+      }
+      case ("CNDT")
+      {
+        assert (DataSize == 4);
+        float Weight;
+      }
+      case ("ENDT")
+      {
+        assert (DataSize == 16);
+        include ENDT;
+      }
+      case ("BKDT")
+      {
+        assert (DataSize == 20);
+        include BKDT;
+      }
+      case ("ENAM")
+      {
+        if (Parent.Type == "WEAP")
+        {
+          cstr Value [len=DataSize];
+        }
+        else
+        {
+          blob Data [len=DataSize];
+        }
+      }
+      case ("DATA")
+      {
+        if (Parent.Type == "CELL")
+        {
+          if (DataSize == 24)
+          {
+            include CELL_DATA;
+          }
+          elif (DataSize == 12)
+          {
+            include CELL_DATA0;
+          }
+          else
+          {
+            blob Data [len=DataSize];
+          }
+        }
+        else
+        {
+          blob Data [len=DataSize];
+        }
+      }
+      case ("AMBI")
+      {
+        assert (DataSize == 16);
+        include AMBI;
+      }
+      case ("FLTV")
+      {
+        float Value;
+      }
+      default
+      {
+        blob Data [len=DataSize];
+      }
+    }
+  }
+  if (CurOffset < Parent.ChunkEndOffset)
+  {
+    sibling;
+  }
+}
+
+[hidden] struct SCHD
+{
+  cstr [len=32] Name;
+  u32 "Short var count";
+  u32 "Long var count";
+  u32 "Float var count";
+  u32 "Bytecode size";
+  u32 "Variable list size";
+}
+
+[hidden] struct CREA_NPDT
+{
+  u32;
+  u32 Level;
+  u32 Str;
+  u32 Int;
+  u32 Wil;
+  u32 Agi;
+  u32 Spd;
+  u32 End;
+  u32 Per;
+  u32 Luc;
+  u32 Health;
+  u32 "Spell Pts";
+  u32 Fatigue;
+  u32 Soul;
+  u32 Combat;
+  u32 Magic;
+  u32 Stealth;
+  repeat (3)
+  {
+    u32 "Attack Min";
+    u32 "Attack Max";
+  }
+  u32 "Barter Gold";
+}
+
+[hidden] struct CELL_DATA
+{
+  float X;
+  float Y;
+  float Z;
+  repeat (3) { float Angle; }
+}
+
+[hidden] struct CELL_DATA0
+{
+  i32;
+  i32;
+  i32;
+}
+
+[hidden] struct NPCO
+{
+  i32 count;
+  str [len=32] "Object ID";
+}
+
+enum AIDT_Flags
+{
+  Weapons, "Repair Items"=9, "Training"=14
+}
+
+[hidden] struct AIDT
+{
+  i8 Fight;
+  i8;
+  i8 Hello;
+  i8 Flee;
+  i8 Alarm;
+  repeat (3) { i8; }
+  set32 Flags [enum=AIDT_Flags];
+}
+
+[hidden] struct AI_W
+{
+  i16 Distance;
+  i16 Duration;
+  i8 "Time of Day";
+  repeat (9) { i8 "Idle chance"; }
+}
+
+enum WPDT_Type
+{
+  MarksmanBow=9, MarksmanCrossbow, MarksmanThrown, Arrow, Bolt
+}
+
+enum WPDT_Flags
+{
+  "Ignores Normal Weapon Resistance"
+}
+
+[hidden] struct WPDT
+{
+  float Weight;
+  u16 Value;
+  i16;
+  enum16 Type [enum=WPDT_Type];
+  i16 Health;
+  repeat (2) { float; }
+  i16 Enchantment;
+  i8 "Chop Minimum";
+  i8 "Chop Maximum";
+  i8 "Slash Minimum";
+  i8 "Slash Maximum";
+  i8 "Thrust Minimum";
+  i8 "Thrust Maximum";
+  set32 Flags [enum=WPDT_Flags];
+}
+
+[hidden] struct MCDT
+{
+  float Weight;
+  i32 Value;
+  i32 Flags;
+}
+
+[hidden] struct NPC_NPDT_Full
+{
+  i16 Level;
+  i8 Str;
+  i8 Int;
+  i8 Wil;
+  i8 Agi;
+  i8 Spd;
+  i8 End;
+  i8 Per;
+  i8 Luc;
+  i8;
+  i8;
+  i8 "Medium Armor";
+  i8;
+  i8;
+  i8;
+  i8;
+  i8;
+  i8 "Athletics";
+  i8;
+  i8;
+  i8;
+  i8;
+  i8;
+  i8;
+  i8;
+  i8 "Alchemy";
+  i8;
+  i8;
+  i8 "Sneak";
+  i8 "Acrobatics";
+  i8;
+  i8;
+  i8 "Marksman";
+  repeat (4) { i8; }
+  i16 Health;
+  i16 Magicka;
+  i16 Fatigue;
+  i16 Disp;
+  i16 Rep;
+  i32 "Barter Gold";
+}
+
+enum ENDT_CastType
+{
+  "Cast Once", "Cast When Strikes", "Cast When Used", "Constant Effect"
+}
+
+[hidden] struct ENDT
+{
+  enum32 "Cast Type" [enum=ENDT_CastType];
+  u32 "Charge Amount";
+  u32 "Enchantment Cost";
+  u32 "Auto Calculate";
+}
+
+[hidden] struct AMBI
+{
+  u8 "Ambient R";
+  u8 "Ambient G";
+  u8 "Ambient B";
+  u8;
+  u8 "Sunlight R";
+  u8 "Sunlight G";
+  u8 "Sunlight B";
+  u8;
+  u8 "Fog R";
+  u8 "Fog G";
+  u8 "Fog B";
+  u8;
+  float "Fog Density";
+}
+
+[hidden] struct BKDT
+{
+  float Weight;
+  i32 Value;
+  i32 Scroll;
+  i32 Teaches;
+  i32 Enchantment;
+}

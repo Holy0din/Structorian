@@ -1,0 +1,18 @@
+struct WARheader
+{
+  str [len=4] Signature;
+  u32 FileCount;
+  x32 FileDataStart;
+  u32;
+  child WARfile [count=FileCount];
+}
+
+struct WARfile
+{
+  str [len=128] FileName;
+  x32 StartOffset;
+  i32 PackedSize;
+  i32;
+  i32 UnpackedSize;
+}
+

@@ -1,0 +1,152 @@
+// T-Mail structure definitions
+// Compiled by Dmitry Jemerov <yole@yole.ru>
+
+enum HistoryFlags
+{
+  Incoming, Outgoing, Successful, Protected
+}
+
+[filemask="t-hist.$*"]
+struct "History file 2603"
+{
+  x16 Signature;
+  if (Signature == 0xF1)
+  {
+    child HistoryRecord2603 [count=((FileSize-2) / sizeof (HistoryRecord2603))];
+  }
+  else
+  {
+    error "Invalid history file signature";
+  }
+}
+
+struct FidoAddr
+{
+  [hidden] i16 Zone;
+  [hidden] i16 Net;
+  [hidden] i16 Node;
+  [hidden] i16 Point;
+  calc Address [value=(Zone + ":" + Net + "/" + Node + "." + Point)];
+}
+
+[tableview]
+struct HistoryRecord2603
+{
+  include FidoAddr;
+  unixtime "Session start";
+  u32 "Session length";
+  i32 "Bytes received";
+  i32 "Bytes sent";
+  u8  "Files received";
+  u8  "Files sent";
+  set16 Flags [enum=HistoryFlags];
+  x32 "Log start offset";
+  x32 "Log end offset";
+  skip 64;
+}
+
+[filemask="t-mail.s*", tableview]
+struct "Traffic record"
+{
+  include FidoAddr;
+  u32 "Total incoming time";
+  u32 "Total outgoing time";
+  u32 "Total bytes received";
+  u32 "Total bytes sent";
+  unixtime "First session";
+  u16 "Total files received";
+  u16 "Total files sent";
+  u16 "Total outgoing sessions";
+  u16 "Successful outgoing sessions";
+  u16 "Total incoming sessions";
+  u16 "Successful incoming sessions";
+  u32 "Total kilobytes received";
+  u32 "Total kilobytes sent";
+  skip 56;
+  if (CurOffset < FileSize)
+  {
+    sibling "Traffic record";
+  }
+}
+
+enum EventType
+{
+  None, Call, Poll, Hold, "Dynamic (reserved)", Mail-From, Mail-For,
+  Files-For, RePack, Exit, Direct, Deny, Exec, Set, NoFrq, Frq,
+  Send, Post, Freeze, "Files-From", "Epost (reserved)", Priority,
+  Drop, MailOnly, Break, UpdReq, SendOnly, Share, "Cost (reserved)",
+  LimitOut, LimitIn, RestoreOut, RestoreIn, KeyMacro, Flavor,
+  "StatusSet (reserved)", "StatusClear (reserved)",
+  "All-For", "All-From", DelayFilesIn, DelayFilesOut
+}
+
+enum EventFlags
+{
+  Critical, Start
+}
+
+[filemask="events.$*", tableview]
+struct "Event record"
+{
+  enum16 Type [enum=EventType];
+  u8  "Minute begin";
+  u8  "Hour begin";
+  u8  "Minute end";
+  u8  "Hour end";
+  i16 "Day begin";
+  i16 "Day end";
+  u16 wparam;
+  set8 bparam [enum=EventFlags];
+  u16 CRC;
+  unixtime "Next time";
+  x32 "Rules ptr";
+  u16 Magic;
+  x32 "Next ptr";
+  if (CurOffset < FileSize)
+  {
+    sibling;
+  }
+}
+
+[filemask="files.ndx"]
+struct "Files index"
+{
+  x16 Signature;
+  u16 "Format version";
+  u32 "Directory count"        [id=DirCount];
+  u32 "Directory list size";
+  u32 "File count"             [id=FileCount];
+  u32 "Dictionary entry count";
+  x32 "File structures offset" [id=FileOffset];
+  x32 "Dictionary offset";
+  x32 "Directory list checksum";
+  child FilesNdxDirs [offset=0x100];
+  child FilesNdxFile [offset=FileOffset, count=FileCount];
+}
+
+[hidden] struct FilesNdxDirs
+{
+  repeat (Parent.DirCount)
+  {
+    u8 "Difference position";
+    str "Directory name tail";
+  }
+}
+
+[hidden] struct FilesNdxFile
+{
+  u16 "Directory index";
+  dosdatetime "File date";
+  u32 "File size";
+  skip 15;
+  u8 marker;
+  skip -16;
+  if (marker == 0)
+  {
+    str [len=16] Name;
+  }
+  else
+  {
+    str [len=256] Name;
+  }
+}

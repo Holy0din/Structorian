@@ -1,0 +1,77 @@
+// The Bat! message base structure definitions
+// Compiled by Dmitry Jemerov <yole@yole.ru>
+
+[filemask="*.tbb"]
+struct TBBHeader
+{
+  u32 Signature;
+  x32 MsgOffset;
+  child TBBMessage [offset=MsgOffset];
+}
+
+enum TBBFlags
+{
+  Deleted, Read, Replied, Parked, Attaches, Flagged=6, Forwarded
+}
+
+enum TBBPriority
+{
+  Normal, High, Low
+}
+
+struct TBBMessageHeader
+{
+  u32 Signature;
+  repeat (4) { u32; }
+  set32 Flags [enum=TBBFlags];
+  u32 "MimeParts?";
+  u32 ColorGroup;
+  enum32 Priority [enum=TBBPriority];
+  u32 MsgSize;
+  repeat (2)  { u32; }
+}
+
+struct TBBMessage
+{
+  include TBBMessageHeader;
+  str Text [len=MsgSize];
+  local NextMessage [value=(StructOffset+sizeof (TBBMessageHeader)+MsgSize)];
+  if (NextMessage < FileSize)
+  {
+    sibling [offset=NextMessage];
+  }
+}
+
+[filemask="*.tbi"]
+struct TBIHeader
+{
+  u32 Signature;
+  u32 IndexRecordOffset;
+  u32;
+  u32 IndexRecordCount;
+  u32 DeletedCount;
+  u32 UnreadCount;
+  u32;
+  u32 "NextMessageIndex?";
+  u32 IndexRecordCapacity;
+  global HeadersStart [value=(IndexRecordOffset + IndexRecordCapacity * SizeOf(TBIRecord))];
+  child TBIRecord [offset=IndexRecordOffset, count=IndexRecordCount];
+}
+
+struct TBIRecord
+{
+  i32 HeadersOffset;
+  i32 TBBOffset;
+  i32 MessageIndex;
+  set32 Flags [enum=TBBFlags];
+  i32;
+  i32;
+  i32 Priority;
+  i32 MessageSize;
+  child TBIHeaders [offset=HeadersStart+HeadersOffset];
+}
+
+struct TBIHeaders
+{
+  x32;
+}

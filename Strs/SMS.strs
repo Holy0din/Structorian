@@ -1,0 +1,182 @@
+// Smart Message Service and Extended Message Service structures
+// Compiled by Dmitry Jemerov <yole@yole.ru>
+
+[global] enum SMPP_Command
+{
+  bind_receiver=1, bind_transmitter, query_sm, submit_sm, deliver_sm,
+  unbind, replace_sm, cancel_sm, bind_transceiver,
+  generic_nack=0x80000000, bind_receiver_resp, bind_transmitter_resp
+}
+
+enum SMPP_Command_Status
+{
+  ESME_ROK, ESME_RINVMSGLEN, ESME_RINVCMDLEN, ESME_RINVCMDID,
+  ESME_RINVBNDSTS, ESME_RALYBND
+}
+
+[byteorder=motorola]
+struct SMPP_Message
+{
+  i32 command_length;
+  enum32 command_id  [enum=SMPP_Command];
+  enum32 command_status [enum=SMPP_Command_Status];
+  i32 sequence_number;
+  switch (command_id)
+  {
+    case bind_transmitter_resp
+    {
+      include SMPP_BIND_TRANSMITTER_RESP;
+    }
+  }
+}
+
+struct SMPP_BIND_TRANSMITTER_RESP
+{
+  str system_id;
+}
+
+struct SMPP_SUBMIT_SM
+{
+  cstr service_type;
+  i8 source_addr_ton;
+  i8 source_addr_npi;
+  cstr source_addr;
+  i8 source_addr_ton;
+  i8 source_addr_npi;
+  cstr dest_addr;
+  i8 esm_class;
+  i8 protocol_id;
+  i8 priority_flag;
+
+  [hidden] u8 schedule_delivery_time_marker;
+  skip -1;
+  if (schedule_delivery_time_marker != 0)
+  {
+    str [len=17] schedule_delivery_time;
+  }
+  else
+  {
+    str [len=1] schedule_delivery_time;
+  }
+
+  [hidden] u8 validity_period_marker;
+  skip -1;
+  if (validity_period_marker != 0)
+  {
+    str [len=17] validity_period;
+  }
+  else
+  {
+    str [len=1] validity_period;
+  }
+
+  i8 registered_delivery;
+  i8 replace_if_present_flag;
+  i8 data_coding;
+  i8 sm_default_msg_id;
+  i8 sm_length;
+  str [len=sm_length] data;
+}
+
+enum UDHType { "Concatenated short messages" = 0x0, 
+    "User Defined Sound" = 0xC,
+    "Variable Picture" = 0x12,
+    "User Prompt Indicator" = 0x13,
+}
+
+struct UDHHeader
+{
+  u8 udhlen;
+  child UDHElement;
+}
+
+struct UDHElement
+{
+  enum8 id [enum=UDHType];
+  u8 length;
+  switch (id)
+  {
+    case (0x0)
+    { 
+      u8 refNum;
+      u8 messageCount;
+      u8 curMessage;
+    }
+    case (0x05)
+    {
+      include SixteenBitAddress;
+    }
+    case (0x0C)
+    {
+      u8 Position;
+      str [len=length-1] Melody;
+    }
+    case (0x12)
+    {
+      u8 Position;
+      u8 HorzSize;
+      u8 VertSize;
+      blob [len=length-3] Data;
+    }
+    case (0x13)
+    {
+      u8 MessageCount;
+    }
+    case (0x14)
+    {
+      include ExtObj;
+    }
+    default
+    {
+      blob Data [len=length];
+    }
+  }
+  if (CurOffset < Parent.StructOffset + Parent.udhlen)
+  {
+    sibling UDHElement;
+  }
+}
+
+struct SixteenBitAddress
+{
+  u16 DestPort;
+  u16 SourcePort;
+}
+
+enum ExtObjFlags
+{
+  MayBeForwarded, UserPrompt
+}
+
+enum ExtObjType
+{
+  PredefinedSound, iMelody, BWBitmap, 2BitBitmap, 6BitBitmap
+}
+
+struct ExtObj
+{
+  u8 ReferenceNumber;
+  i16 Length;
+  set8 [enum=ExtObjFlags] Flags;
+  enum8 [enum=ExtObjType] Type;
+  i16 Position;
+  blob [len=Length] Data;
+}
+
+struct NokiaLogoMessage
+{
+  include UDHHeader;
+  u8 Version;
+  u16 MobileCountryCode;
+  u8 MobileNetworkCode;
+  u8 LineFeed;
+  include OTABitmap;
+}
+
+struct OTABitmap
+{
+  u8 Infofield;
+  u8 Width;
+  u8 Height;
+  u8 Depth;
+}

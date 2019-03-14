@@ -1,0 +1,199 @@
+[filemask="*.doc"]
+struct FIB
+{
+  x16 wIdent;
+  u16 nFib;
+  u16 nProduct;
+  u16 lid;
+  i16 pnNext;
+  bitfield(2)
+  {
+    i16 [bit=0] fDot;
+    i16 [bit=1] fGlsy;
+    i16 [bit=2] fComplex;
+    i16 [bit=3] fHasPic;
+    i16 [frombit=4, tobit=7] cQuickSaves;
+    i16 [bit=8] fEncrypted;
+    i16 [bit=9] fWhichTblStm;
+    i16 [bit=10] fReadOnlyRecommended;
+    i16 [bit=11] fWriteReservation;
+    i16 [bit=12] fExtChar;
+    i16 [bit=13] fLoadOverride;
+    i16 [bit=14] fFarEast;
+    i16 [bit=15] fCrypto;
+  }
+  u16 nFibBack;
+  x32 lKey;
+  u8 envr;
+  bitfield(1)
+  {
+    i16 [bit=0] fMac;
+    i16 [bit=1] fEmptySpecial;
+    i16 [bit=2] fLoadOverridePage;
+    i16 [bit=3] fFutureSavedUndo;
+    i16 [bit=4] fWord97Saved;
+    i16 [frombit=5, tobit=7] fSpare0;
+  }
+  u16 chs;
+  u16 chsTables;
+  u32 fcMin;
+  u32 fcMax;
+  u16 csw;
+  child FIBShorts;
+  skip(csw*2);
+  u16 clw;
+  child FIBLongs [offset=curoffset];
+  skip(clw*4);
+  u16 cfclcb;
+  child FIBOffsets [offset=curoffset];
+}
+
+struct FIBShorts
+{
+  x16 wMagicCreated;
+  x16 wMagicRevised;
+  x16 wMagicCreatedPrivate;
+  x16 wMagicRevisedPrivate;
+  x16 pnFbpChpFirst_W6;
+  x16 pnChpFirst_W6;
+  x16 cpnBteChp_W6;
+  x16 pnFbpPapFirst_W6;
+  x16 pnPapFirst_W6;
+  x16 cpnBtePap_W6;
+  x16 pnFbpLvcFirst_W6;
+  x16 pnLvcFirst_W6;
+  x16 cpnBteLvc_W6;
+  x16 lidFE;
+}
+
+struct FIBLongs
+{
+  u32 cbMax;
+  u32 lProductCreated;
+  u32 lProductRevised;
+  u32 ccpText;
+  u32 ccpFtn;
+  u32 ccpHdd;
+  u32 ccpMcr;
+  u32 ccpAnn;
+  u32 ccpEdn;
+  u32 ccpTxBx;
+  u32 ccpHdrTxbx;
+  u32 pnFbpChpFirst;
+  u32 pnChpFirst;
+  u32 cpnBteChp;
+  u32 pnFbpPapFirst;
+  u32 pnPapFirst;
+  u32 cpnBtePap;
+  u32 pbFbpLvcFirst;
+  u32 pnLvcFirst;
+  u32 cpnBteLvc;
+  u32 fcIslandFirst;
+  u32 fcIslandLim;
+}
+
+struct FIBOffsets
+{
+  u32 fcStshfOrig;
+  u32 lcbStshfOrig;
+  u32 fcStshf;
+  u32 lcbStshf;
+  u32 fcPlcffndRef;
+  u32 lcbPlcffndRef;
+  u32 fcPlcffndTxt;
+  u32 lcbPlcffndTxt;
+  u32 fcPlcfandRef;
+  u32 lcbPlcfandRef;
+  u32 fcPlcfandTxt;
+  u32 lcbPlcfandTxt;
+  u32 fcPlcfsed;
+  u32 lcbPlcfsed;
+  u32 fcPlcpad;
+  u32 lcbPlcpad;
+  u32 fcPlcfphe;
+  u32 lcbPlcfphe;
+  u32 fcSttbfglsy;
+  u32 lcbSttbfglsy;
+  u32 fcPlcfglsy;
+  u32 lcbPlcfglsy;
+  u32 fcPlcfhdd;
+  u32 lcbPlcfhdd;
+  u32 fcPlcfbteChpx;
+  u32 lcbPlcfbteChpx;
+  u32 fcPlcfbtePapx;
+  u32 lcbPlcfbtePapx;
+  u32 fcPlcfsea;
+  u32 lcbPlcfsea;
+  u32 fcSttbfffn;
+  u32 lcbSttbfffn;
+  u32 fcPlcffldMom;
+  u32 lcbPlcffldMom;
+  u32 fcPlcffldHdr;
+  u32 lcbPlcffldHdr;
+  u32 fcPlcffldFtn;
+  u32 lcbPlcffldFtn;
+  u32 fcPlcffldAtn;
+  u32 lcbPlcffldAtn;
+  u32 fcPlcffldMcr;
+  u32 lcbPlcffldMcr;
+  u32 fcSttbfbkmk;
+  u32 lcbSttbfbkmk;
+  u32 fcPlcfbkf;
+  u32 lcbPlcfbkf;
+  u32 fcPlcfbkl;
+  u32 lcbPlcfbkl;
+  u32 fcCmds;
+  u32 lcbCmds;
+  u32 fcPlcmcr;
+  u32 lcbPlcmcr;
+  u32 fcSttbfmcr;
+  u32 lcbSttbfmcr;
+  u32 fcPrDrvr;
+  u32 lcbPrDrvr;
+  u32 fcPrEnvPort;
+  u32 lcbPrEnvPort;
+  u32 fcPrEnvLand;
+  u32 lcbPrEnvLand;
+  u32 fcWss;
+  u32 lcbWss;
+  u32 fcDop;
+  u32 lcbDop;
+  u32 fcSttbfAssoc;
+  u32 lcbSttbfAssoc;
+  u32 fcClx;
+  u32 lcbClx;
+  u32 fcPlcfpgdFtn;
+  u32 lcbPlcfpgdFtn;
+  u32 fcAutosaveSource;
+  u32 lcbAutosaveSource;
+  u32 fcGrpXstAtnOwners;
+  u32 lcbGrpXstAtnOwners;
+  u32 fcSttbfAtnbkmk;
+  u32 lcbSttbfAtnbkmk;
+  u32 fcPlcdoaMom;
+  u32 lcbPlcdoaMom;
+  u32 fcPlcdoaHdr;
+  u32 lcbPlcdoaHdr;
+  u32 fcPlcspaMom;
+  u32 lcbPlcspaMom;
+  u32 fcPlcspaHdr;
+  u32 lcbPlcspaHdr;
+  u32 fcPlcfAtnbkf;
+  u32 lcbPlcfAtnbkf;
+  u32 fcPlcfAtnbkl;
+  u32 lcbPlcfAtnbkl;
+  u32 fcPms;
+  u32 lcbPms;
+  u32 fcFormFldSttbs;
+  u32 lcbFormFldSttbs;
+  u32 fcPlcfendRef;
+  u32 lcbPlcfendRef;
+  u32 fcPlcfendTxt;
+  u32 lcbPlcfendTxt;
+  u32 fcPlcffldEdn;
+  u32 lcbPlcffldEdn;
+  u32 fcPlcfpgdEdn;
+  u32 lcbPlcfpgdEdn;
+  u32 fcDggInfo;
+  u32 lcbDggInfo;
+}

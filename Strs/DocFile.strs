@@ -1,0 +1,40 @@
+struct GUID
+{
+  x32 Data1;
+  x16 Data2;
+  x16 Data3;
+  repeat(8) { x8 Data4; }
+}
+
+struct DocFileHeader
+{
+  x32 SignatureLow;
+  x32 SignatureHigh;
+  assert(SignatureLow == 0xE011CFD0);
+  assert(SignatureHigh == 0xE11AB1A1);
+
+  include GUID;
+  x16 _uMinorVersion;
+  x16 _uDllVersion;
+  x16 _uByteOrder;
+
+  x16 _uSectorShift;
+  x16 _uMiniSectorShift;
+
+  x16 _usReserved;
+  x32 _ulReserved1;
+  x32 _ulReserved2;
+
+  u32 _csectFat;
+  u32 _sectDirStart;
+
+  u32 _signature;
+
+  u32 _ulMiniSectorCutoff;
+
+  u32 _sectMiniFatStart;
+  u32 _csectMiniFat;
+
+  u32 _sectDifStart;
+  u32 _csectDif;
+}

@@ -1,0 +1,2064 @@
+// Definitions for Infinity Engine data structures
+// Compiled by Dmitry Jemerov <yole@yole.ru>
+
+enum ResourceType
+{
+  BMP, MVE,
+  WAV=4, WFX, PLT,
+  BAM=0x3E8, WED, CHU, MAP, MOS, ITM, SPL, BCS,
+  IDS, CRE, AREA, DLG, 2DA, GAME, STOR, WMAP,
+  EFF, VVC, PRO,
+  INI=0x802, SRC
+}
+
+struct Auto
+{
+  [hidden] str [len=4] Signature;
+  skip -4;
+  switch (Signature)
+  {
+    case ("BIFF")  { include [replace] BIFF; }
+    case ("KEY ")  { include [replace] KEY;  }
+    case ("BAM ")  { include [replace] BAM;  }
+    case ("WED ")  { include [replace] WED;  }
+    case ("CHUI")  { include [replace] CHUI; }
+    case ("MOS ")  { include [replace] MOS;  }
+    case ("ITM ")  { include [replace] ITM;  }
+    case ("SPL ")  { include [replace] SPL;  }
+    case ("CRE ")  { include [replace] CRE;  }
+    case ("AREA")  { include [replace] AREA; }
+    case ("DLG ")  { include [replace] DLG;  }
+    case ("GAME")  { include [replace] GAME; }
+    case ("STOR")  { include [replace] STOR; }
+    case ("WMAP")  { include [replace] WMAP; }
+    case ("EFF ")  { include [replace] EFF;  }
+    case ("VVC ")  { include [replace] VVC;  }
+    case ("PRO ")  { include [replace] PRO;  }
+    case [default] { message "No known Infinity Engine file type has been recognized"; }
+  }
+}
+
+alias str [len=8] resref;
+alias i32 strref;
+
+// -- KEY --------------------------------------------------------------------
+
+[filemask="chitin.key"]
+struct KEY
+{
+  str [len=8] Signature;
+  i32 "BIFF count"  [id=BIFFCount];
+  i32 "File count"  [id=FileCount];
+  x32 "BIFF offset" [id=BIFFOffset];
+  x32 "File offset" [id=FileOffset];
+  child KEYBIFF     [offset=BIFFOffset, count=BIFFCount];
+}
+
+[hidden]
+struct KEYBIFF
+{
+  i32 "BIFF length";
+  x32 "Name offset" [id=NameOffset];
+  i16 "Name length" [id=NameLength];
+  bits16 "CD mask";
+  seek NameOffset;
+  cstr [len=NameLength] Name;
+}
+
+// -- TLK --------------------------------------------------------------------
+
+[filemask="dialog.tlk"]
+struct TLKTest
+{
+  child TLK;
+}
+
+struct TLK
+{
+  str [len=8] Signature;
+  u16;
+  i32 "Entry count"  [id=EntryCount];
+  x32 "Base offset"  [id=BaseOffset];
+  child TLKEntry [count=EntryCount];
+}
+
+[hidden] struct TLKEntry
+{
+  u16 Type;
+  resref Sound;
+  repeat (2) { u32; }
+  x32 Offset;
+  i32 Size;
+  seek (Parent.BaseOffset + Offset);
+  str [len=Size] Text;
+}
+
+// -- BIFF -------------------------------------------------------------------
+
+[filemask="*.bif"]
+struct BIFF
+{
+  str [len=8] Signature;
+  i32 "Element count" [id=ElementCount];
+  i32 "Map count";
+  x32 "Element offset" [id=ElementOffset];
+  child BIFFEntry [offset=ElementOffset, count=ElementCount];
+}
+
+[hidden, preload] struct BIFFEntry
+{
+  i16 "Element index";
+  i16 "BIFF index";
+  x32 "Start offset" [id=Offset];
+  i32 "Resource size" [id=Size];
+  enum32 Type [enum=ResourceType];
+  child Auto [offset=Offset];
+}
+
+// -- BAM --------------------------------------------------------------------
+
+[filemask="*.bam"]
+struct BAM
+{
+  str [len=8] Signature;
+  i16 "Frame count";
+  u8  "Animation count"     [id=AnimCnt];
+  x8  "Transparent color";
+  x32 "Frame header offset" [id=FrameHeaderOffset];
+  x32 "Palette offset";
+  x32 "Animation array offset" [id=AnimOffset];
+  local AbsFrameHeaderOffset [value=StructOffset+FrameHeaderOffset];
+  child BAMAnim [offset=(StructOffset+AnimOffset), count=AnimCnt];
+}
+
+[hidden] struct BAMAnim
+{
+  i16 "Frame count" [id=FrameCnt];
+  i16 "Start frame" [id=StartFrame];
+  child BAMFrameHdr [offset=(Parent.AbsFrameHeaderOffset+StartFrame*sizeof(BAMFrameHdr)),
+                     count=FrameCnt];
+}
+
+[hidden] struct BAMFrameHdr
+{
+  i16 Width;
+  i16 Height;
+  i16 "Base point X position";
+  i16 "Base point Y position";
+  bitfield (4)
+  {
+    x32 [frombit=0,  tobit=30] "Graphics offset";
+    x8  [frombit=31, tobit=31] "RLE compressed";
+  }
+}
+
+// -- WED --------------------------------------------------------------------
+
+[filemask="*.wed"]
+struct WED
+{
+  str [len=8] Signature;
+  i32 "Overlay count"           [id=OverlayCnt];
+  i32 "Door count"              [id=DoorCnt];
+  x32 "Overlays offset"         [id=OverlayOffset];
+  x32 "Secondary header offset" [id=SecHdrOffset];
+  x32 "Doors offset"            [id=DoorOffset];
+  x32 "Door tile cell offset";
+  child WEDSecondaryHeader [offset=(StructOffset+SecHdrOffset)];
+  child WEDOverlay         [offset=(StructOffset+OverlayOffset), count=OverlayCnt];
+  child WEDDoor            [offset=(StructOffset+DoorOffset), count=DoorCnt];
+}
+
+[hidden] struct WEDSecondaryHeader
+{
+  i32 "Wall polygon count"  [id=WallPolyCnt];
+  x32 "Polygons offset"     [id=PolyOffset];
+  x32 "Vertices offset";
+  x32 "Wall groups offset";
+  x32 "Polygon indices lookup table offset";
+  child WEDPoly [offset=(Parent.StructOffset+PolyOffset), count=WallPolyCnt];
+}
+
+[hidden] struct WEDOverlay
+{
+  i16 Width;
+  i16 Height;
+  resref Tileset;
+  u32;
+  x32 "Tile map offset";
+  x32 "Tile index lookup offset";
+}
+
+[hidden] struct WEDPoly
+{
+  i32 "First point";
+  i32 "Point count";
+  u8 Passable;
+  u8;
+  i16 "X min";
+  i16 "X max";
+  i16 "Y min";
+  i16 "Y max";
+}
+
+[hidden] struct WEDDoor
+{
+  str [len=8] Name;
+  u16;
+  u16 "Door tile cell index";
+  u16 "Door tile cell count";
+  u16 "Open polygons count"    [id=OpenCnt];
+  u16 "Closed polygons count"  [id=ClosedCnt];
+  x32 "Open polygons offset"   [id=OpenOffset];
+  x32 "Closed polygons offset" [id=ClosedOffset];
+  child WEDPoly [offset=(Parent.StructOffset+OpenOffset),
+                 count=OpenCnt, group="Open polygons"];
+  child WEDPoly [offset=(Parent.StructOffset+ClosedOffset),
+                 count=ClosedCnt, group="Closed polygons"];
+}
+
+// -- CHUI -------------------------------------------------------------------
+
+[filemask="*.chu"]
+struct CHUI
+{
+  str [len=8] Signature;
+  u32 "Screen count" [id=SenCount];
+  x32 "Control index offset" [id=CIndexOffset];
+  x32 "Screen offset" [id=ScreenOffset];
+  child CHUIScreen [offset=(StructOffset+ScreenOffset), count=ScreenCount];
+}
+
+[hidden, preload] struct CHUIScreen
+{
+  [hidden] x16 xWindowID;
+  skip -2;
+  if (xWindowID > 0x100)    // autodetect broken CHUI
+  {
+    str [len=8] Name;
+  }
+  x16 "Window ID";
+  x16;
+  i16 X;
+  i16 Y;
+  i16 Width;
+  i16 Height;
+  i16 "Has background";
+  i16 "Control count" [id=ControlCount];
+  resref "Background MOS name";
+  i16 "First control" [id=FirstControl];
+  i16;
+  child CHUIControl [count=ControlCount,
+                     offset=(Parent.StructOffset+Parent.CIndexOffset+FirstControl*8)];
+}
+
+enum CHUIControlType
+{
+  "Button"=0, "Slider"=2, "Text edit"=3, "Text area"=5,
+  "Edit/static text"=6, "Scrollbar"=7
+}
+
+[hidden] struct CHUIControl
+{
+  x32 "Control offset" [id=ControlOffset];
+  u32 "Control size";
+  seek (Parent.Parent.StructOffset+ControlOffset);
+  x32 "Control ID";
+  i16   X;
+  i16   Y;
+  i16   Width;
+  i16   Height;
+  enum8 "Control type" [id=ControlType, enum=CHUIControlType];
+  i8;
+  switch (ControlType)
+  {
+    case (0) { include [replace] CHUIButton;     }
+    case (2) { include [replace] CHUISlider;     }
+    case (3) { include [replace] CHUITextEdit;   }
+    case (5) { include [replace] CHUITextArea;   }
+    case (6) { include [replace] CHUIStaticText; }
+    case (7) { include [replace] CHUIScrollbar;  }
+  }
+}
+
+[hidden] struct CHUIButton
+{
+  resref "BAM name";
+  u16 "BAM cycle";
+  u16 "Up frame";
+  u16 "Down frame";
+  u16 "Selected frame";
+  u16 "Disabled frame";
+}
+
+[hidden] struct CHUISlider
+{
+  resref "MOS background";
+  resref "BAM slider knob";
+  u16 "BAM cycle";
+  u16 "Slider ungrabbed frame";
+  u16 "Slider grabbed frame";
+  repeat (8) { u16; }
+}
+
+[hidden] struct CHUITextEdit
+{
+  repeat (3) { str [len=8] MOS; }
+  str [len=8] "BAM cursor name";
+  repeat (6) { u16; }
+  str [len=8] "BAM font name 2";
+  repeat (20) { u16; }
+}
+
+[hidden] struct CHUITextArea
+{
+  repeat (2) { str [len=8] "BAM font name"; }
+  repeat (3) { x32 Color; }
+  i16 "ID of attached scrollbar";
+  i16;
+}
+
+[hidden] struct CHUIStaticText
+{
+  i32 "Initial value strref";
+  str [len=8] "BAM font name";
+  repeat (2) { x32 Color; }
+  u16;
+}
+
+[hidden] struct CHUIScrollbar
+{
+  str [len=8] "BAM name";
+  u16 "BAM cycle";
+  u16 "Up button unpressed frame";
+  u16 "Up button pressed frame";
+  u16 "Down button unpressed frame";
+  u16 "Down button pressed frame";
+  u16 "Background frame";
+  u16 "Thumb frame";
+  u16 "ID of attached text field";
+  u16;
+}
+
+// -- MOS --------------------------------------------------------------------
+
+[filemask="*.mos"]
+struct MOS
+{
+  str [len=8] Signature;
+  i16 Width;
+  i16 Height;
+  i16 Columns;
+  i16 Rows;
+  i32 "Block size";
+  i32 "Block BPP";
+}
+
+// -- ITM --------------------------------------------------------------------
+
+enum ITMtype {
+  "Books/misc",
+  "Amulet/Necklace",
+  Armor,
+  "Belt and girdles",
+  Boots,
+  Arrows,
+  "Bracers and gauntles",
+  Headgear,
+  Keys,
+  Potions,
+  Rings,
+  Scrolls,
+  Shields,
+  Food,
+  Bullets,
+  Bows,
+  Daggers,
+  Maces,
+  Slings,
+  "Short swords",
+  "Long swords",
+  Hammers,
+  "Morning stars",
+  Flails,
+  Darts,
+  Axes,
+  Quarterstaff,
+  Crossbow,
+  "Hand-to-hand weapons",
+  Spears,
+  Halberds,
+  Bolts,
+  "Cloaks and robes",
+  "Gold pieces",
+  Gems,
+  Wands,
+  Container,
+  Book,
+  "Broken Swords"
+}
+
+enum ITMAttributes {
+  Indestructible,
+  "Two-handed",
+  Droppable,
+  Displayable,
+  Cursed,
+  Copyable,
+  Magical,
+  Bow,
+  Unsellable,
+  "Cold iron",
+  "",
+  Conversible
+}
+
+enum ItemUsability {
+  Anyone,
+  Chaotic,
+  Evil,
+  Good,
+  "Good-Evil Neutral",
+  Lawful,
+  "Lawful-Chaotic Neutral",
+  Bard,
+  Cleric,
+  "Cleric-Mage",
+  "Cleric-Thief",
+  "Cleric-Ranger",
+  Fighter,
+  "Fighter-Druid",
+  "Fighter-Mage",
+  "Fighter-Cleric",
+  "Fighter-Mage-Cleric",
+  "Fighter-Mage-Thief",
+  "Fighter-Thief",
+  Mage,
+  "Mage-Thief",
+  Paladin,
+  Ranger,
+  Thief,
+  Elf,
+  Dwarf,
+  "Half-Elf",
+  Halfling,
+  Human,
+  Gnome,
+  Monk,
+  "Half-Orc"
+}
+
+enum ITMlauncher {
+  None,
+  Bow,
+  Crossbow,
+  Sling
+}
+
+enum DamageType {
+  None,
+  Piercing,
+  Crushing,
+  Slashing,
+  Missile,
+  Fists
+}
+
+enum WhenDrainedType {
+  Disappears=1,
+  "Becomes destroyed"=2,  // NEW!
+  Remains=3
+}
+
+enum RechargeType {
+  "N/A"=0,
+  No=1,
+  "When resting"=8
+}
+
+[filemask="*.itm"]
+struct ITM
+{
+  str [len=8] Signature;
+  i32 "TLK Unidentified";
+  i32 "TLK Identified";
+  str [len=8] Destroyed;
+  set32 Attributes    [enum=ITMAttributes];
+  enum16 Type         [enum=ITMType];
+  set32 "Unusable by" [enum=ItemUsability];
+  str [len=2] "Weapon ID";
+  i16 "Min Level";
+  i16 "Min Str";
+  i16 "Min Str Bonus";
+  i16 "Min Int";
+  i16 "Min Dex";
+  i16 "Min Wis";
+  i16 "Min Con";
+  i16 "Min Cha";
+  i32 Price;
+  i16 "Max in stack";
+  str [len=8] "Inventory picture ID";
+  i16 "Lore to identify";
+  str [len=8] "Ground picture ID";
+  i32 Weight;
+  i32 "TLK Unident Description";
+  i32 "TLK Ident Description";
+  str [len=8] "Carried picture ID";
+  i32 Enchanted;
+  x32 "Ability offset"      [id=AbilOffset];
+  i16 "Ability count"       [id=AbilCount];
+  x32 "Effect offset"       [id=EffectOffset];
+  i16 "First global effect" [id=FirstGlobalEffect];
+  i16 "Global effect count" [id=GlobalEffectCount];
+  child Effect [offset=(StructOffset+EffectOffset), count=GlobalEffectCount];
+  child "ITM 1.1 ability" [offset=(StructOffset+AbilOffset), count=AbilCount];
+}
+
+enum AbilityType {
+  Default,
+  Melee,
+  Ranged,
+  Magical,
+  Launcher
+}
+
+enum AbilityIconLocation {
+  "Weapon slots"=1,
+  "Item slots"=3,
+  "Gem?"=4
+}
+
+enum AbilityTarget {
+  "Living actor"=1,
+  Inventory,
+  "Dead actor",
+  "Point within range",
+  Caster
+}
+
+[hidden] struct "ITM 1.1 ability"
+{
+  enum8 Type [enum=AbilityType];
+  i8 "Use only identified";
+  enum16 "Ability icon location" [enum=AbilityIconLocation];
+  str [len=8] "Weapon ID";
+  enum16 "Target type"   [enum=AbilityTarget];
+  i16 Range;
+  enum16 "Launcher type" [enum=ITMlauncher];
+  i16 "Speed factor";
+  i16 Bonus;
+  i16 "Dice value";
+  i16 "Dice count";
+  i16 Enchanted;
+  enum16 "Damage type" [enum=DamageType];
+  i16 "Effect count"   [id=EffectCount];
+  i16 "First effect"   [id=FirstEffect];
+  i16 "Charge count";
+  enum8 "When drained" [enum=WhenDrainedType];
+  i8;
+  i8 "Allow strength bonus";
+  enum8 "Item recharges" [enum=RechargeType];
+  i16;
+  i16 "Projectile type";
+  i16 "Animation: overhand swing %";
+  i16 "Animation: backhand swing %";
+  i16 "Animation: thrust %";
+  i16 "Is arrow";
+  i16 "Is bolt";
+  i16 "Is missile";
+  child Effect [offset=(Parent.StructOffset+Parent.EffectOffset+FirstEffect*SizeOf(Effect)),
+                count=EffectCount];
+}
+
+enum EffectType {
+  "Bonus to AC",
+  "Attacks per 2 round bonus",
+  Awaken,
+  Berserk,
+  Calm,
+  "Charm creature",
+  "Charisma bonus",
+  "Set item color",
+  "Set colorglow solid",
+  "Set colorglow pulse",
+  "Constitution bonus",
+  "Cure poison",
+  Damage,
+  Death,
+  Defrost,
+  "Dexterity bonus",
+  Haste,
+  "Current HP bonus",
+  "Max HP bonus",
+  "Intelligence bonus",
+  Invisibility,
+  "Lore bonus",
+  "Luck bonus",
+  "Remove fear",
+  Panic,
+  Poison,
+  "Remove curse",
+  "Acid resistance bonus",
+  "Cold resistance bonus",
+  "Electricity resistance bonus",
+  "Fire resistance bonus",
+  "Magic damage resistance bonus",
+  "Raise dead",
+  "Save vs death bonus",
+  "Save vs wands bonus",
+  "Save vs polymorph bonus",
+  "Save vs breath bonus",
+  "Save vs spell bonus",
+  Silence,
+  Sleep,
+  Slow,
+  Sparkle,
+  "Bonus wizard spells",
+  "Stone to flesh",
+  "Strength bonus",
+  Stun,
+  Unstun,
+  Visible,
+  Vocalize,
+  "Wisdom bonus",
+  "Character color 1",
+  "Character color 2",
+  "Character color 3",
+  "Animation change",
+  "THAC0 bonus",
+  Slay,
+  "Reverse alignment",
+  "Change alignment",
+  "Dispel effects",
+  "Stealth bonus",
+  "Casting failure",
+  "Unknown (3D)",
+  "Bonus priest spells",
+  Infravision,
+  "Remove infravision",
+  Blur,
+  Translucent,
+  "Summon creature",
+  "Unsummon creature",
+  "Non-detection",
+  "Remove non-detection",
+  "Change sex",
+  "Set reaction",
+  "Attack damage bonus",
+  Blindness,
+  "Cure blindness",
+  Feeblemindedness,
+  "Cure feeblemindedness",
+  Disease,
+  "Cure disease",
+  Deafness,
+  "Cure deafness",
+  "Set AI script",
+  "Immunity to projectile",
+  "Magical fire resistance bonus",
+  "Magical cold resistance bonus",
+  "Slashing resistance bonus",
+  "Crushing resistance bonus",
+  "Piercing resistance bonus",
+  "Missile resistance bonus",
+  "Lockpicking bonus",
+  "Find traps bonus",
+  "Pick pockets bonus",
+  "Fatigue bonus",
+  "Intoxification bonus",
+  "Tracking bonus",
+  "Change level",
+  "Exceptional strength bonus",
+  Regeneration,
+  "Modify duration",
+  "Protection from creature type",
+  "Immunity to effect",
+  "Immunity to spell level",
+  "Change name",
+  "XP bonus",
+  "Gold bonus",
+  "Break morale",
+  "Change portrait",
+  Reputation,
+  "Hold creature",
+  "Retreat from",
+  "Create item",
+  "Remove item",
+  "Equip weapon",
+  "Disallow spellcasting",
+  "Detect alignment",
+  "Detect invisible",
+  Clairvoyance,
+  "Show creatures",
+  "Mirror image",
+  "Immunity to weapons",
+  "Visual animation effect",
+  "Create inventory item",
+  "Remove inventory item",
+  Teleport,
+  Unlock,
+  "Movementrate bonus",
+  "Summon monsters",
+  Confusion,
+  "Aid (non-cumulative)",
+  "Bless (non-cumulative)",
+  "Chant (non-cumulative)",
+  "Draw upon holy might (non-cumulative)",
+  "Luck (non-cumulative)",
+  Petrification,
+  Polymorph,
+  "Force visible",
+  "Bad chant (non-cumulative)",
+  "Character animation change",
+  "Display string",
+  "Casting glow",
+  "Lighting effects",
+  "Display portrait icon",
+  "Create item in slot",
+  "Disable button",
+  "Disable spellcasting",
+  "Cast spell",
+  "Learn spell",
+  "Cast spell (scroll)",
+  Identify,
+  "Find traps",
+  "Summon hostile creature",
+  "Play movie",
+  Sanctuary,
+  "Entangle overlay",
+  "Minor globe overlay",
+  "Protection from normal missiles overlay",
+  "Web effect overlay",
+  "Grease effect overlay",
+  "Mirror image effect",
+  "Unknown (A0)",
+  "Remove fear 2",
+  "Remove paralysis",
+  "Free action",
+  "Slow poison",
+  "Burning hands overlay",
+  "Magic resistance bonus",
+  "Missile THAC0 bonus",
+  "Remove creature",
+  "Remove portrait icon",
+  "Play damage animation",
+  "Give innate ability",
+  "Remove spell",
+  "Reduced damage from poison",
+  "Play sound",
+  "Hold creature type",
+  "Unknown (B0)",
+  "Use EFF file",
+  "THAC0 vs. type bonus",
+  "Damage vs. type bonus",
+  "Disallow item",
+  "Unknown (B5)",
+  "Unknown (B6)",
+  "Unknown (B7)",
+  "Unknown (B8)",
+  "Hold creature 2",
+  "Increase critical hits",
+  "Set local variable",
+  "Increase spells cast pr. round",
+  "Increase casting speed factor",
+  "Increase attack speed factor"
+}
+
+enum EffectTargetType {
+  Self=1,
+  "Preset target",
+  Party,
+  "Global including party",
+  "Global excluding party"
+}
+
+enum EffectDuration {
+  "Instant/Limited",
+  "Instant/Permanent",
+  "Instant/While Equipped",
+  "Delay/Permanent"=4,
+  "Instant/Permanent after bonuses"=9
+}
+
+enum EffectDispel {
+  Dispel, "Bypass resistance"
+}
+
+enum EffectSaveType {
+  Spells, Breath, "Death/poison", Wands, Petrification
+}
+
+struct Effect
+{
+  enum16 "Effect type"     [enum=EffectType];
+  enum8 "Target type"      [enum=EffectTargetType];
+  i8 Power;
+  i32 "Param 1";
+  i32 "Param 2";
+  enum8 Duration           [enum=EffectDuration];
+  set8 "Dispel/Resistance" [enum=EffectDispel];
+  i32 Time;
+  i16 Probability;
+  str [len=8] ResRef;
+  i32 "Damage dice count";
+  i32 "Damage dice sides";
+  set32 "Save type"        [enum=EffectSaveType];
+  i32 "Save bonus";
+  i32;
+}
+
+// -- SPL --------------------------------------------------------------------
+
+enum SPLLocationFlag
+{
+  "Outdoors"=8, "Daylight", "Weather", "City", "Forest", "Dungeon",
+  "Extended night", "Can rest other"
+}
+
+enum SPLType
+{
+  "Special", "Wizard", "Priest", "Innate"=4
+}
+
+enum SPLSchool
+{
+  "Necromancy"=8, "Alteration", "Enchantment", "Abjuration",
+  "Illusion", "Conjuration", "Invocation", "Divination"
+}
+
+enum SPLCategory
+{
+  "None", "SpellProtections", "SpecificProtections", "IllusionaryProtections",
+  "MagicAttack", "DivinationAttack", "Conjuration", "CombatProtections",
+  "Contingency", "Battleground", "OffensiveDamage", "Disabling",
+  "Combination", "Non-combat"
+}
+
+[filemask="*.spl"]
+struct SPL
+{
+  str [len=8] Signature;
+  i32    "Spell name strref";
+  i32    "Identified name strref";
+  str [len=8] "Casting sound (WAV)";
+  set32  "Illegal locations" [enum=SPLLocationFlag];
+  enum16 "Spell type"       [enum=SPLType];
+  bits16 "Wizard school";
+  bits16 "Priest type";
+  enum8  "Spell school"      [enum=SPLSchool];
+  i16;
+  i16    "Spell school (selection)";
+  enum8  "Spell category"    [enum=SPLCategory];
+  repeat (3) { u32; }
+  i32    "Spell level";
+  i16;
+  str [len=8] "Spell icon";
+  repeat (5) { i16; }
+  u32;
+  i32    "Description strref";
+  u32;
+  repeat (6) { i16; }
+  x32    "Ability offset"       [id=AbilOffset];
+  u16    "Ability count"        [id=AbilCount];
+  u32    "Effects offset"       [id=EffectOffset];
+  u16    "First global effect";
+  u16    "Global effect count"  [id=GlobalEffectCount];
+  child Effect [offset=(StructOffset+EffectOffset), count=GlobalEffectCount];
+  child  SPLAbility [offset=(StructOffset+AbilOffset), count=AbilCount];
+}
+
+[hidden] struct SPLAbility
+{
+  enum8  Type [enum=AbilityType];
+  u8     ;
+  enum16 "Ability icon location" [enum=AbilityIconLocation];
+  str [len=8] Icon;
+  enum16 "Target type" [enum=AbilityTarget];
+  i16    Range;
+  i16    "Minimum level";
+  i16    "Casting speed";
+  i16    "To hit";
+  i16    "Dice value";
+  i16    "Dice count";
+  i16    Enchanted;
+  enum16 "Damage type" [enum=DamageType];
+  i16    "Effect count"   [id=EffectCount];
+  i16    "First effect"   [id=FirstEffect];
+  i16    "Charge count";
+  i16    ;
+  i16    "Projectile type";
+  child Effect [offset=(Parent.StructOffset+Parent.EffectOffset+FirstEffect*SizeOf(Effect)),
+                count=EffectCount];
+}
+
+// -- CRE --------------------------------------------------------------------
+
+enum CREflags {
+  "No corpse"=1,
+  "Was fighter"=3,
+  "Was mage",
+  "Was cleric",
+  "Was thief",
+  "Was druid",
+  "Was ranger",
+  "Fallen paladin",
+  "Fallen ranger",
+  "Export allowed",
+}
+
+[filemask="*.cre"]
+struct CRE
+{
+  skip 4;
+  str [len=4, hidden] Version;
+  skip -8;
+  str [len=8] Signature;
+  i32 "Name strref";
+  i32 "Tooltip strref";
+  set32 Flags     [enum=CREflags];
+  i32 "XP value";
+  i32 XP;
+  i32 Gold;
+  bits32 Status;
+  i16 "Current HP";
+  i16 "Max HP";
+  u16 "Animation ID";
+  i16;
+  x8 "Metal color";
+  x8 "Minor color";
+  x8 "Major color";
+  x8 "Skin color";
+  x8 "Leather color";
+  x8 "Armor color";
+  x8 "Hair color";
+  i8 "Effect flag";
+  str [len=8] "Small portrait";
+  str [len=8] "Large portrait";
+  i8 Reputation;
+  i8 "Hide in shadows";
+  i16 "Natural AC";
+  if (Version == "V2.3")
+  {
+    repeat (4) { u16; }
+    repeat (9) { u8; }
+  }
+  else
+  {
+    i16 "Effective AC";
+    i16 "Crushing AC modifier";
+    i16 "Missile AC modifier";
+    i16 "Piercing AC modifier";
+    i16 "Slashing AC modifier";
+    i8 THAC0;
+    i8 "# attacks";
+    i8 "Save death";
+    i8 "Save wands";
+    i8 "Save poly";
+    i8 "Save breath";
+    i8 "Save spell";
+  }
+  i8 "Resist fire";
+  i8 "Resist cold";
+  i8 "Resist electricity";
+  i8 "Resist acid";
+  i8 "Resist magic";
+  i8 "Resist magical fire";
+  i8 "Resist magical cold";
+  i8 "Resist slashing";
+  i8 "Resist crushing";
+  i8 "Resist piercing";
+  i8 "Resist missile";
+  i8 "Detect illusions";
+  i8 "Set traps";
+  i8 Lore;
+  i8 "Open locks";
+  i8 "Move silently";
+  i8 "Find/disarm traps";
+  i8 "Pick pockets";
+  i8 Fatigue;
+  i8 Intoxication;
+  i8 Luck;
+  switch (Version)
+  {
+    case ("V1.0")
+    {
+      i8 "Large sword proficiency";
+      i8 "Small sword proficiency";
+      i8 "Bow proficiency";
+      i8 "Spears proficiency";
+      i8 "Blunt proficiency";
+      i8 "Spiked proficiency";
+      i8 "Axe proficiency";
+      i8 "Missile proficiency";
+      repeat (13) { i8; }
+    }
+  }
+  if (Version == "V2.2")
+  {
+    repeat (14) { u16; }
+    repeat (6)  { u16; }
+    repeat (11) { u16; }
+    local SoundMapOffset [value=CurOffset];
+    skip 252;
+    i32 Biography;
+    repeat (2) { resref; }
+    u32;
+    repeat (6) { u8; }
+    repeat (80) { u16; }
+    i8 Str;
+    i8 Int;
+    i8 Wis;
+    i8 Dex;
+    i8 Con;
+    i8 Cha;
+    repeat (4)  { u16; }
+    repeat (4)  { resref; }
+    resref;
+    repeat (23) { u16; }
+    resref;
+    repeat (89)  { u16; }
+  }
+  else
+  {
+    i8 Tracking;
+    repeat (8) { i32; }
+    local SoundMapOffset [value=CurOffset];
+    skip 400;   // sound map
+    i8 "Primary level";
+    i8 "Secondary level";
+    i8 "Third level/Dual class";
+    u8;
+    i8 Str;
+    i8 "Str bonus";
+    i8 Int;
+    i8 Wis;
+    i8 Dex;
+    i8 Con;
+    i8 Cha;
+    i8 Morale;
+    i8 "Morale break";
+    i8 "Racial enemy";
+    i8 "Morale recovery";
+    i8;
+    i16;
+    i16 "Mage type";
+    str [len=8] "Override script";
+    str [len=8] "Class script";
+    str [len=8] "Race script";
+    str [len=8] "General script";
+    str [len=8] "Default script";
+  }
+  u8 "Enemy/Ally";
+  u8 General;
+  u8 Race;
+  u8 Class;
+  u8 Specific;
+  u8 Gender;
+  repeat (5) { u8 Functional; }
+  u8 Alignment;
+  repeat (2) { i16; }
+  cstr [len=32] "Death variable";
+  if (Version == "V2.2")
+  {
+    repeat (3)   { u16; }
+    repeat (144) { u32; }
+    x32 SpellDataOffset;
+    u32 SpellDataCount;
+    repeat (4)   { u32; }
+    child CRESpell22 [offset=StructOffset+SpellDataOffset, count=SpellDataCount];
+  }
+  else
+  {
+    x32 "Known spells offset" [id=KnSpOffset];
+    i32 "Known spells count" [id=KnSpCount];
+    x32 "Spell slots offset" [id=SpSlotsOffset];
+    i32 "Spell slots count" [id=SpSlotsCount];
+    x32 "Memorized spells offset" [id=MemSpOffset];
+    i32 "Memorized spells count" [id=MemSpCount];
+    child CREKnownSpell     [group="Known spells", offset=StructOffset+KnSpOffset,    count=KnSpCount];
+    child CRESpellSlot      [group="Spell slots",  offset=StructOffset+SpSlotsOffset, count=SpSlotsCount];
+    child CREMemorizedSpell [group="Memorized",    offset=StructOffset+MemSpOffset,   count=MemSpCount];
+  }
+  x32 "Item slots offset" [id=ItemSlotsOffset];
+  x32 "Items offset"      [id=ItemsOffset];
+  i32 "Items count"       [id=ItemsCount];
+  x32 "Effect offset"     [id=EffectOffset];
+  i32 "Effect count"      [id=EffectCount];
+  resref Dialog;
+  child CREItemSlots      [offset=StructOffset+ItemSlotsOffset];
+  child CREItem           [group="Items",        offset=StructOffset+ItemsOffset,   count=ItemsCount];
+  child Effect            [group="Effects",      offset=StructOffset+EffectOffset,  count=EffectCount];
+  child CRESoundMap       [offset=SoundMapOffset];
+}
+
+enum CRESpellType {
+  Priest,
+  Wizard,
+  Innate,
+}
+
+[hidden] struct CREKnownSpell
+{
+  str [len=8] Spell;
+  i16 Level;
+  enum16 Type [enum=CRESpellType];
+}
+
+[hidden] struct CRESpellSlot
+{
+  i16 "Spell level";
+  i16 "Spells memorizable";
+  i16;
+  enum16 Type [enum=CRESpellType];
+  i32 "Memorized spell index";
+  i32 "Memorized spell count";
+}
+
+enum CREMemorizedFlags {
+  Memorized,
+}
+
+[hidden] struct CREMemorizedSpell
+{
+  str [len=8] Spell;
+  set32 Flags [enum=CREMemorizedFlags];
+}
+
+enum CRESpellType22
+{
+  Innate=1,
+  Wizard,
+  Domain
+}
+
+[hidden] struct CRESpell22
+{
+  i32 SpellIndex;
+  enum32 [enum=CRESpellType22] SpellType;
+  i32 Count;
+  i32;
+}
+
+[hidden] struct CREItemSlots
+{
+  i16 Helmet;
+  i16 Armor;
+  i16 Shield;
+  i16 Gloves;
+  i16 "Left Ring";
+  i16 "Right Ring";
+  i16 Amulet;
+  i16 Belt;
+  i16 Boots;
+  repeat (4) { i16 Weapon; }
+  repeat (3) { i16 Quiver; }
+  i16;
+  i16 Cloak;
+  repeat (3) { i16 "Quick item"; }
+  repeat (16) { i16 Inventory; }
+  i16;
+  u32;
+}
+
+enum CREItemFlags {
+  Identified,
+  Stolen=2,
+  Undroppable,
+}
+
+[hidden] struct CREItem
+{
+  str [len=8] "ITM file";
+  i16;
+  repeat (3) { i16 "Quantity/Charges"; }
+  set32 Flags [enum=CREItemFlags];
+}
+
+[hidden] struct CRESoundMap
+{
+  local index [value=0];
+  repeat (100)
+  {
+    [hidden] x32 _Sound;
+    if (_Sound != -1)
+    {
+      skip -4;
+      calc "Sound index" [value=index];
+      i32 Sound;
+    }
+    local index [value=index+1];
+  }
+}
+
+// -- AREA -------------------------------------------------------------------
+
+[filemask="*.are"]
+struct AREA
+{
+  str [len=8] Signature;
+  str [len=8] ID;
+  x32 "Last saved";
+  x32;
+  str [len=8] "Exit N";
+  x32;
+  str [len=8] "Exit W";
+  x32;
+  str [len=8] "Exit S";
+  x32;
+  str [len=8] "Exit E";
+  x32;
+  bits16 Flags;
+  i16 "Rain probability";
+  i16 "Snow probability";
+  i16 "Fog probability";
+  i16 "Lightning probability";
+  i16;
+  if (Signature == "AREAV9.1")
+  {
+    repeat (4) { u32; }
+  }
+  x32 "NPC offset" [id=NPCOffset];
+  i16 "NPC count" [id=NPCCount];
+  i16 "Trigger count" [id=TriggerCount];
+  x32 "Trigger offset" [id=TriggerOffset];
+  x32 "Spawn point offset" [id=SpawnOffset];
+  i32 "Spawn point count" [id=SpawnCount];
+  x32 "Entry point offset" [id=EntryOffset];
+  i32 "Entry point count" [id=EntryCount];
+  x32 "Container offset" [id=ContainerOffset];
+  i16 "Container count" [id=ContainerCount];
+  i16 "Item count" [id=ItemCount];
+  x32 "Item offset" [id=ItemOffset];
+  x32 "Point offset" [id=PointOffset];
+  i16 "Point count" [id=PointCount];
+  i16 "Sound count" [id=SoundCount];
+  x32 "Sound offset" [id=SoundOffset];
+  x32 "Variable offset" [id=VarOffset];
+  i32 "Variable count" [id=VarCount];
+  i32;
+  resref "AI script";
+  i32 "Explored mask size";
+  x32 "Explored mask offset";
+  i32 "Door count" [id=DoorCount];
+  x32 "Door offset" [id=DoorOffset];
+  i32 "Anim count" [id=AnimCount];
+  x32 "Anim offset" [id=AnimOffset];
+  i32 "Tiled object count" [id=TiledObjCount];
+  x32 "Tiled object offset" [id=TiledObjOffset];
+  x32 "Song offset" [id=SongOffset];
+  x32 "Rest spawn creatures offset" [id=RestSpawnOffset];
+  child AreaNPC       [group="NPCs",         offset=StructOffset+NPCOffset,       count=NPCCount];
+  child AreaTrigger   [group="Triggers",     offset=StructOffset+TriggerOffset,   count=TriggerCount];
+  child AreaSpawn     [group="Spawn points", offset=StructOffset+SpawnOffset,     count=SpawnCount];
+  child AreaEntry     [group="Entry points", offset=StructOffset+EntryOffset,     count=EntryCount];
+  child AreaContainer [group="Containers",   offset=StructOffset+ContainerOffset, count=ContainerCount];
+  child AreaSound     [group="Sounds",       offset=StructOffset+SoundOffset,     count=SoundCount];
+  child AreaVar       [group="Variables",    offset=StructOffset+VarOffset,       count=VarCount];
+  child AreaDoor      [group="Doors",        offset=StructOffset+DoorOffset,      count=DoorCount];
+  child AreaAnim      [group="Animations",   offset=StructOffset+AnimOffset,      count=AnimCount];
+  child AreaSong      [offset=StructOffset+SongOffset];
+  child AreaRestSpawn [offset=StructOffset+RestSpawnOffset];
+}
+
+[hidden] struct AreaNPC
+{
+  cstr [len=32] Name;
+  nodename Name;
+  i16 "Current X";
+  i16 "Current Y";
+  i16 "Dest X";
+  i16 "Dest Y";
+  i32 "Is visible?";
+  repeat (2) { i32; }
+  i32 "Actor orientation";
+  repeat (2) { i32; }
+  bits32 "Day/night presence";
+  i32;
+  str [len=8] Dialog;
+  str [len=8] "Script override";
+  str [len=8] "Script class";
+  str [len=8] "Script race";
+  str [len=8] "Script general";
+  str [len=8] "Script default";
+  str [len=8] "Script specifics";
+  str [len=8] "CRE file";
+  x32 "CRE offset";
+  repeat (33) { x32; }
+}
+
+[hidden] struct Rect
+{
+  i16 X1;
+  i16 Y1;
+  i16 X2;
+  i16 Y2;
+}
+
+[hidden] struct AreaTrap
+{
+  i16 "Trap detection difficulty";
+  i16 "Trap removal difficulty";
+  i16 Trapped;
+  i16 "Trap detected";
+  i16 "Trap launch X";
+  i16 "Trap launch Y";
+}
+
+enum AreaTriggerType {
+  Proximity,
+  Info,
+  Travel
+}
+
+enum AreaTriggerFlags {
+ "Trap undetectable",
+ "Reset trap",
+ "Party required",
+ "Detectable trap",
+ "Trap set off by NPC"=6,
+ "Trigger deactivated"=8,
+ "Cannot be used by NPC",
+ "Use override box",
+ "Connected to door"
+}
+
+[hidden] struct AreaTrigger
+{
+  cstr [len=32] Name;
+  nodename Name;
+  enum16 Type [enum=AreaTriggerType];
+  include Rect;
+  i16 "Point count";
+  i32 "First point";
+  repeat (4) { x16; }
+  resref "Dest area";
+  cstr [len=32] "Dest entrance";
+  set32 Flags [enum=AreaTriggerFlags];
+  i32 "TLK index";
+  include AreaTrap;
+  resref "Key type";
+  resref Script;
+  repeat (28) { x16; }
+  str [len=8] Dialog;
+}
+
+[hidden] struct AreaSpawn
+{
+  cstr [len=32] Name;
+  i16 X;
+  i16 Y;
+  repeat (10)
+  {
+    resref Creature;
+  }
+  i16 "Creature count";
+  i16 "Spawn frequency?";
+  i16 "Seconds between spawning";
+  bits16 Flags;
+  i32;
+  repeat (2) { i16; }
+  i16 "Max spawned creature";
+  i16 field_86;
+  bits32 "Day/night presence?";
+  repeat (2) { i16; }
+  repeat (14) { i32; }
+}
+
+[hidden] struct AreaEntry
+{
+  str [len=32] Name;
+  i16 X;
+  i16 Y;
+  i16 Direction;
+  repeat (33) { i16; }
+}
+
+enum AreaContainerType {
+  Bag=1,
+  Chest,
+  Drawer,
+  Pile,
+  Table,
+  Shelf,
+  Altar,
+  Nonvisible,
+  Spellbook,
+  Body,
+  Barrel,
+  Crate
+}
+
+[hidden] struct AreaContainer
+{
+  cstr [len=32] Name;
+  i16 X;
+  i16 Y;
+  enum16 Type [enum=AreaContainerType];
+  i16 "Lock difficulty";
+  i16 Locked;
+  i16;
+  include AreaTrap;
+  include Rect;
+  i32 "Start item" [id=StartItem];
+  i32 "Item count" [id=ItemCount];
+  str [len=8] "Trap script";
+  i32 "First point";
+  i32 "Point count";
+  cstr [len=32];
+  str [len=8] "Key type";
+  i32;
+  str [len=4] "Lockpick type";
+  repeat (14) { i32; }
+  child AreaItem
+        [offset=(Parent.StructOffset + Parent.ItemOffset + StartItem * SizeOf(AreaItem)),
+         count=ItemCount];
+}
+
+enum AreaSoundFlags {
+  Enabled,
+  "Point sound",
+  "Main ambient",
+  "Area sound"
+}
+
+[hidden] struct AreaSound
+{
+  cstr [len=32] Name;
+  i16 X;
+  i16 Y;
+  i16 Radius;
+  i16 "Frequency?";
+  repeat (3) { i16; }
+  i16 "Volume (%)";
+  repeat (10)
+  {
+    resref Sound;
+  }
+  i16 "Sound count";
+  i16;
+  i32 "Time interval";
+  i32 "# sounds to use";
+  bits32 "Day/night presence";
+  set32 Flags [enum=AreaSoundFlags];
+  repeat (16) { i32; }
+}
+
+[hidden] struct AreaVar
+{
+  cstr [len=32] Name;
+  repeat (2) { i32; }
+  i32 Value;
+  repeat (10) { i32; }
+  nodename Name;
+}
+
+enum AreaDoorFlags {
+  "Door open",
+  "Door locked",
+  "Trap must be disarmed",
+  "Detectable trap",
+  "",
+  "Can be opened?",
+  "Can be opened? (2)",
+  "Door secret",
+  "",
+  "Can be looked through",
+  "Uses key",
+  "Slide door"
+}
+
+[hidden] struct AreaDoor
+{
+  cstr [len=32] Name;
+  str [len=8] ID;
+  set32 Flags [enum=AreaDoorFlags];
+  i32 "Open first point";
+  i16 "Open point count";
+  i16 "Closed point count";
+  i32 "Closed first point";
+  repeat (2)
+  {
+    include Rect;
+  }
+  i32 "Impeded closed first point";
+  i16 "Impeded closed point count";
+  i16 "Impeded open point count";
+  i32 "Impeded open first point";
+  repeat (2) { i16; }
+  resref "Sound: open";
+  resref "Sound: close";
+  i32 "Cursor BAM anim number";
+  include AreaTrap;
+  resref "Key type";
+  resref "Trap script";
+  i32;
+  i32 "Lock difficulty";
+  i16 "Open location X";
+  i16 "Open location Y";
+  i16 "Closed location X";
+  i16 "Closed location Y";
+  i32 "Unlock message";
+  str [len=8] "Travel trigger name";
+  repeat (4) { i32; }
+  i32 "Door name";
+  resref Dialog;
+  repeat (2) { i32; }
+}
+
+[hidden] struct AreaItem
+{
+  str [len=8] ID;
+  i16;
+  i16 Count;
+  i32;
+  i16 Identified;
+  i16;
+}
+
+enum AreaAnimFlags {
+  "Is shown",
+  "No shades",
+  "Night shade",
+  "Partial animation"
+}
+
+[hidden] struct AreaAnim
+{
+  cstr [len=32] Name;
+  i16 X;
+  i16 Y;
+  bits32 "Day/night presence?";
+  cstr [len=8] "BAM ID";
+  i16 "BAM cycle";
+  i16 "BAM frame";
+  set32 Flags [enum=AreaAnimFlags];
+  repeat (5) { i32; }
+}
+
+[hidden] struct AreaSong
+{
+  i32 "Day song reference number";
+  i32 "Night song reference number";
+  i32;
+  i32 "Battle song reference number";
+  repeat (6) { i32; }
+  cstr [len=16];
+  i32;
+  cstr [len=16];
+  repeat (2) { i32; }
+  repeat (15) { i32; }
+}
+
+[hidden] struct AreaRestSpawn
+{
+  cstr [len=32] Name;
+  repeat (10) { i32 "Creature strref"; }
+  repeat (10) { str [len=8] "Creature resref"; }
+  i16 "Creatures in list";
+  i16 "Encounter difficulty";
+  i32;
+  repeat (2) { i16; }
+  i16 "Max spawned creatures";
+  i16;
+  i16 "Chance of encounter";
+  i16;
+  repeat (14) { i32; }
+}
+
+// -- DLG --------------------------------------------------------------------
+
+[filemask="*.dlg"]
+struct DLG
+{
+  str [len=8] Signature;
+  i32 "Phrase count" [id=PhraseCount];
+  x32 "Phrase offset" [id=PhraseOffset];
+  i32 "Response count" [id=ResponseCount];
+  x32 "Response offset" [id=ResponseOffset];
+  x32 "Condition offset" [id=CondOffset];
+  i32 "Condition count" [id=CondCount];
+  x32 "Response condition offset" [id=RespCondOffset];
+  i32 "Response condition count" [id=RespCondCount];
+  x32 "Action offset" [id=ActionOffset];
+  i32 "Action count" [id=ActionCount];
+  child DLGphrase [offset=StructOffset+PhraseOffset, count=PhraseCount];
+}
+
+[hidden] struct DLGphrase
+{
+  strref "TLK index";
+  i32 "First response" [id=FirstResponse];
+  i32 "Response count" [id=ResponseCount];
+  i32 "Condition index" [id=Cond];
+  if (Cond != -1)
+  {
+    seek (Parent.StructOffset + Parent.CondOffset + Cond*8);
+    [hidden] x32 CondOffset;
+    [hidden] x32 CondLength;
+    seek (Parent.StructOffset + CondOffset);
+    cstr Condition [len=CondLength];
+  }
+  child DLGresponse [offset=(Parent.StructOffset + Parent.ResponseOffset + FirstResponse*SizeOf(DLGresponse)),
+                     count=ResponseCount];
+}
+
+enum DLGresponseFlags {
+  Text,
+  Trigger,
+  Action,
+  "End dialog",
+  Journal,
+  "Add quest"=6,
+  "Remove quest",
+}
+
+[hidden] struct DLGresponse
+{
+  set32 Flags [enum=DLGresponseFlags];
+  i32 "TLK index";
+  i32 "Journal index";
+  i32 "Condition index" [id=Cond];
+  i32 "Action index" [id=Action];
+  str [len=8] "Response dialog";
+  i32 "Response phrase";
+  if (Cond != -1)
+  {
+    seek (Parent.Parent.StructOffset+Parent.Parent.RespCondOffset+Cond*8);
+    [hidden] x32 CondOffset;
+    [hidden] x32 CondLength;
+    seek (Parent.Parent.StructOffset+CondOffset);
+    cstr Condition [len=CondLength];
+  }
+  if (Action != -1)
+  {
+    seek (Parent.Parent.StructOffset + Parent.Parent.ActionOffset+Action*8);
+    [hidden] x32 ActionOffset;
+    [hidden] x32 ActionLength;
+    seek (Parent.Parent.StructOffset + ActionOffset);
+    cstr Action [len=ActionLength];
+  }
+}
+
+// -- GAME -------------------------------------------------------------------
+
+enum GAMEFormation
+{
+  "Formation 1", "Formation 2", "Formation 3", "Formation 4", "Formation 5"
+}
+
+[filemask="*.gam", preload]
+struct GAME
+{
+  str [len=8] Version;
+  x32 "Game time";
+  enum16 Formation [enum=GameFormation];
+  repeat (5)
+  {
+    u16 "Formation button";
+  }
+  u32 "Party gold";
+  u32;
+  x32 "Party members offset"   [id=PartyOffset];
+  u32 "Party members count"    [id=PartyCount];
+  repeat (2) { u32; }
+  x32 "NPC offset"             [id=NPCOffset];
+  u32 "NPC count"              [id=NPCCount];
+  x32 "Global var offset"      [id=GlobalOffset];
+  u32 "Global var count"       [id=GlobalCount];
+  resref "Main area";
+  i32;
+  u32 "Journal entries count"  [id=JournCount];
+  x32 "Journal entries offset" [id=JournOffset];
+  u32;
+  resref "Current area?";
+  repeat (21) { u32; }
+  child GAMEChar    [group="Party",       offset=StructOffset+PartyOffset,  count=PartyCount];
+  child GAMEChar    [group="NPCs",        offset=StructOffset+NPCOffset,    count=NPCCount];
+  child AreaVar     [group="Global vars", offset=StructOffset+GlobalOffset, count=GlobalCount];
+  child GAMEJournal [group="Journal",     offset=StructOffset+JournOffset,  count=JournCount];
+}
+
+[hidden] struct GAMEChar
+{
+  u16 Selected;
+  u16 "Party order";
+  x32 "CRE offset" [id=CREOffset];
+  u32 "CRE size";
+  resref "CRE name";
+  u32 "Character orientation";
+  resref "Current area";
+  u16 X;
+  u16 Y;
+  u16 "View rect X";
+  u16 "View rect Y";
+  u16;
+  u16 Happiness;
+  repeat (37) { u32; }
+  if (Parent.Version == "GAMEV2.2")
+  {
+    repeat (63) { u32; }
+    u16;
+  }
+  str [len=32] Name;
+  nodename Name;
+  u32;
+  include GAMECharStats;
+  if (Parent.Version == "GAMEV2.2")
+  {
+    resref;
+    str [len=32] SoundSet;
+    repeat (48) { u32; }
+    u16;
+  }
+  else
+  {
+    repeat (2) { u32; }
+  }
+  if (CREOffset > 0)
+  {
+    child CRE [offset=Parent.StructOffset+CREOffset];
+  }
+}
+
+[hidden] struct GAMECharStats
+{
+  strref "Most powerful foe vanquished";
+  u32 "XP for most powerful foe";
+  repeat (3) { u32; }
+  u32 "Kill XP (chapter)";
+  u32 "Kill count (chapter)";
+  u32 "Kill XP (game)";
+  u32 "Kill count (game)";
+  repeat (4) { resref "Favourite spell"; }
+  repeat (4) { i16 "Favourite spell count"; }
+  repeat (4) { resref "Favourite weapon"; }
+  repeat (4) { i16 "Favourite weapon count"; }
+}
+
+[hidden] struct GAMEJournal
+{
+  strref "Journal text";
+  u32 "Time in seconds";
+  u32 "Current chapter";
+}
+
+// -- STOR -------------------------------------------------------------------
+
+enum StoreType {
+  Store,
+  Tavern,
+  Inn,
+  Temple
+}
+
+enum StoreFlags {
+  "Can buy",
+  "Can sell",
+  "Can identify",
+  "Can steal",
+  "Can buy cures",
+  "Can donate",
+  "Can buy drinks"
+}
+
+enum StoreRoomFlags {
+  Peasant,
+  Merchant,
+  Noble,
+  Royal
+}
+
+struct STOR
+{
+  str [len=8] Signature;
+  enum32 "Store type" [enum=StoreType];
+  i32 "Name strref";
+  set32 Flags [enum=StoreFlags];
+  i32 "Sell price";
+  i32 "Buy price";
+  i32 "Buy price reduction";
+  i16 "Stealing difficulty";
+  i16 "Storage capacity";
+  str [len=8];
+  x32 "Items purchased offset" [id=PurOffset];
+  i32 "Items purchased count" [id=PurCount];
+  x32 "Items sold offset" [id=SoldOffset];
+  i32 "Items sold count" [id=SoldCount];
+  i32 "Identify lore";
+  i32 "Cost to identify";
+  str [len=8] "Rumor dialog";
+  x32 "Drinks offset" [id=DrinkOffset];
+  i32 "Drinks count" [id=DrinkCount];
+  str [len=8] "Donate rumor dialog";
+  set32 "Available rooms" [enum=StoreRoomFlags];
+  i32 "Peasant room price";
+  i32 "Merchant room price";
+  i32 "Noble room price";
+  i32 "Royal room price";
+  x32 "Cures offset" [id=CureOffset];
+  i32 "Cures count" [id=CureCount];
+  repeat (9) { i32; }
+  child STORSold [group="Sold", offset=StructOffset+SoldOffset, count=SoldCount];
+  if (PurCount > 0)
+  {
+    child STORPurchased [offset=StructOffset+PurOffset];
+  }
+  child STORDrink [group="Drinks", offset=StructOffset+DrinkOffset, count=DrinkCount];
+  child STORCure  [group="Cures",  offset=StructOffset+CureOffset,  count=CureCount];
+}
+
+enum StoreItemFlags {
+  Identified=0,
+  Stolen=2
+}
+
+enum StoreItemFlags2 {
+  "Infinite supply?"
+}
+
+[hidden] struct STORSold
+{
+  resref Item;
+  i16;
+  i16 "Usage 1";
+  i16 "Usage 2";
+  i16 "Usage 3";
+  set32 Flags [enum=StoreItemFlags];
+  i32 "Count in stock";
+  set32 "Flags 2" [enum=StoreItemFlags2];
+}
+
+[hidden] struct STORPurchased
+{
+  repeat (Parent.PurCount)
+  {
+    enum32 Category [enum=ITMtype];
+  }
+}
+
+[hidden] struct STORDrink
+{
+  resref SpecialRumor;
+  i32 "Drink name strref";
+  i32 Price;
+  i32 IntoxicationAmount;
+}
+
+[hidden] struct STORCure
+{
+  resref Spell;
+  i32 Price;
+}
+
+// -- WMAP -------------------------------------------------------------------
+
+[filemask="*.wmp"]
+struct WMAP
+{
+  str [len=8] Signature;
+  i32 "Worldmap count" [id=WMapCount];
+  x32 "Worldmap offset" [id=WMapOffset];
+  child WorldMap [offset=StructOffset+WMapOffset, count=WMapCount];
+}
+
+[hidden] struct WorldMap
+{
+  str [len=8] "Map resource name";
+  i32 "X size";
+  i32 "Y size";
+  i32;
+  i32 "Name strref";
+  repeat (2) { i32; }
+  i32 "Area count" [id=AreaCount];
+  x32 "Area offset" [id=AreaOffset];
+  x32 "Link offset" [id=LinkOffset];
+  i32 "Link count" [id=LinkCount];
+  str [len=8] "Map icon res name";
+  repeat (32) { i32; }
+  child WorldMapArea [offset=Parent.StructOffset+AreaOffset, count=AreaCount];
+}
+
+enum WorldMapAreaFlags {
+  Visible,
+  "Can be visited"=2,
+  Visited
+}
+
+[hidden] struct WorldMapArea
+{
+  str [len=8] "Short name";
+  str [len=8] "Area content";
+  cstr [len=32] "Long name";
+  set32 Flags [enum=WorldMapAreaFlags];
+  i32 "BAM frame";
+  i32 X;
+  i32 Y;
+  i32 "Name strref";
+  i32 "Tooltip strref";
+  str [len=8] "Loading screen";
+  i32 "First link north" [id=NLinkFirst];
+  i32 "Link north count" [id=NLinkCount];
+  i32 "First link west" [id=WLinkFirst];
+  i32 "Link west count" [id=WLinkCount];
+  i32 "First link south" [id=SLinkFirst];
+  i32 "Link south count" [id=SLinkCount];
+  i32 "First link east" [id=ELinkFirst];
+  i32 "Link east count" [id=ELinkCount];
+  repeat (32) { i32; }
+  child WorldMapLink [offset=(Parent.Parent.StructOffset+Parent.LinkOffset+NLinkFirst*SizeOf (WorldMapLink)),
+                      count=NLinkCount, group="North"];
+  child WorldMapLink [offset=(Parent.Parent.StructOffset+Parent.LinkOffset+WLinkFirst*SizeOf (WorldMapLink)),
+                      count=WLinkCount, group="West"];
+  child WorldMapLink [offset=(Parent.Parent.StructOffset+Parent.LinkOffset+SLinkFirst*SizeOf (WorldMapLink)),
+                      count=SLinkCount, group="South"];
+  child WorldMapLink [offset=(Parent.Parent.StructOffset+Parent.LinkOffset+ELinkFirst*SizeOf (WorldMapLink)),
+                      count=ELinkCount, group="East"];
+}
+
+[hidden] struct WorldMapLink
+{
+  i32 "Target area index";
+  cstr [len=32] "Entry point name";
+  i32 "Travel hours";
+  i32;
+  repeat (5) { str [len=8] "Random encounter area"; }
+  i32 "Random encounter probability";
+  repeat (32) { i32; }
+}
+
+// -- EFF --------------------------------------------------------------------
+
+[filemask="*.eff"]
+struct EFF
+{
+  str [len=8] Signature;
+  str [len=8] "Signature 2";
+  enum32 "Effect type"     [enum=EffectType];
+  enum32 "Target type"     [enum=EffectTargetType];
+  u32;
+  i32 "Param 1";
+  i32 "Param 2";
+  enum32 Duration          [enum=EffectDuration];
+  i32 Time;
+  i16 "Probability 1";
+  i16 "Probability 2";
+  resref Resource;
+  set32 "Save type"        [enum=EffectSaveType];
+  i32 "Save bonus";
+  repeat (12) { i32; }
+  resref Animation;
+  repeat (19) { i32; }
+}
+
+// -- VVC --------------------------------------------------------------------
+
+[filemask="*.vvc"]
+struct VVC
+{
+  str [len=8] Signature;
+  resref "BAM Animation";
+  repeat (2) { u32; }
+  u16 Transparency;
+  u16 Tint;
+  u32;
+  u32 "Play method?";
+  u32;
+  u32 "X position";
+  u32 "Y position";
+  u32;
+  u32 Framerate;
+  repeat (5) { u32; }
+  u32 "Z position";
+  repeat (6) { u32; }
+  u32 "First BAM animation";
+  u32 "Second BAM animation";
+  repeat (2) { u32; }
+  resref "Starting sound";
+  resref "Duration sound";
+  repeat (89) { u32; }
+}
+
+// -- PRO --------------------------------------------------------------------
+
+enum PROSparksColor
+{
+  "Black"=1, "Blue", "Purple and amber", "Amber",
+  "Pale green", "Purple", "Pink", "Grey", "Aqua",
+  "White", "Pale pink", "Gold"
+}
+
+enum PROSmokeType
+{
+  "Fireball ring", "Little bubbles", "Flesh pieces",
+  "Smoke", "Skull trap", "Cloudkill ring", "Cloudkill ring (2)",
+  "Grease", "Web", "Cloudkill ring (3)", "Abi-Dalzim",
+  "Color spray", "Storm of vengence"
+}
+
+enum PROExplProj
+{
+  "Fireball", "Stinking cloud", "Cloudkill", "Ice storm",
+  "Grease", "Web", "Meteor", "Abi-Dalzim's Horrid Wilting",
+  "Teleport field", "Entangle", "Color spray",
+  "Cone of cold", "Holy smite", "Unholy blight",
+  "Prismatic spray", "Big flame", "Storm of vengence",
+  "Purple fireball", "Green dragon blast"
+}
+
+[filemask="*.pro"]
+struct PRO
+{
+  str [len=8] Signature;
+  x16 "Projectile type" [id=ProjType];
+  u16 "Projectile speed";
+  x16 "Show sparks";
+  u16;
+  repeat (3) { resref Sound; }
+  enum32 "Sparks color" [enum=PROSparksColor];
+  skip 212;
+  u32;
+  resref "Projectile BAM";
+  resref "Shadow BAM";
+  u8 "Projectile animation";
+  u8 "Shadow animation";
+  u16 "Show light spot";
+  u8 "Light spot X size";
+  u8 "Projectile invisible";
+  u16 "Light spot Y size";
+  resref;
+  repeat (6) { u8 color; }
+  u8;
+  u8 "Smoke puff delay";
+  u8 "Smoke color";
+  repeat (3) { u16; }
+  u8 "Aim to target";
+  u8;
+  enum8 "Smoke type" [enum=PROSmokeType];
+  resref "Trailing BAM";
+  repeat (4) { u32; }
+  u16 "Trailing distance?";
+  skip 176;
+  if (CurOffset-StructOffset != 512) { error "Broken structure: offset must be 512"; }
+  if (ProjType == 3)
+  {
+    u8 "Area of effect targets";
+    u8 "Area of effect type";
+    u16;
+    u16 "Trap type";
+    u16 Radius;
+    resref "Exploding sound?";
+    u16 "Trap radius";
+    u8;
+    enum8 "Explosion type" [enum=PROSmokeType];
+    u16;
+    u8 Duration;
+    enum8 "Explosion projectile" [enum=PROExplProj];
+    u8 "Color of explosion";
+    u8;
+    u16 "Explosion effect";
+    resref;
+    u16 "Cone width";
+    skip 218;
+    if (CurOffset-StructOffset != 768) { error "Broken structure: offset must be 768"; }
+  }
+}

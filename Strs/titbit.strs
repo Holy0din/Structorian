@@ -1,0 +1,23 @@
+[filemask="QUEST.ezd"]
+struct EZD
+{
+   str [len=4] Signature;
+   i32 FileCount;
+   x32 DataStart;
+   u32 TotalSize;
+   child EZDFile;
+}
+
+struct EZDFile
+{
+  str FileName;
+  u8;
+  x32;
+  x32 StartOffset;
+  u32 Length;
+  u32 CompressedLength;
+  if (CurOffset < Parent.DataStart)
+  {
+    sibling EZDFile;
+  }
+}

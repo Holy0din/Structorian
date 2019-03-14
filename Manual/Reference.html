@@ -1,0 +1,1058 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Language" content="en-us" />
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Structorian Script Reference</title>
+<link href="StructorianManual.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 align="center">Structorian Script Reference</h1>
+<h2>1. Overall Script Syntax</h2>
+<p>The Structorian script is a text file in the ANSI codepage. The file is 
+processed as a sequence of <i>tokens</i>. Whitespace characters (spaces, tabs 
+and line breaks) are used to separate tokens, but carry no semantic value.</p>
+<p>Structorian scripts may include end-of-line comments. Like in C++, a comment 
+starts with the characters // and continues till the end of the line.</p>
+<p>The main token types used in Structorian scripts are <i>strings</i> and <i>
+numbers</i>. </p>
+<p>Strings can be specified &quot;as is&quot;, without any delimiters, if they start with 
+one of the following characters:</p>
+<blockquote>
+  <pre>'A'..'Z', 'a'..'z', '_', '0'..'9', '-'</pre>
+</blockquote>
+<p>and the characters after the first are in the following set:</p>
+<blockquote>
+  <pre>'A'..'Z', 'a'..'z', '_', '0'..'9', '+', '-', '*', '/', '!', '&lt;', '&gt;', '&amp;', '|', '.'</pre>
+</blockquote>
+<p>If a string contains other characters (for example, spaces), it must be 
+enclosed in parentheses or quotation marks. By convention, expressions are 
+enclosed in parentheses, and user-visible strings (like field tags) are enclosed 
+in quotation marks. However, the parsing code handles both cases in the same 
+way. No means are provided for escaping quotation marks, so if you need to have 
+a field tag containing quotation marks, it should be enclosed in parentheses.</p>
+<p>The following lines are examples of valid strings:</p>
+<blockquote>
+  <pre>Signature
+&quot;Size of header in paragraphs&quot;
+(RawData + Parent.ExportDirVA - VA)</pre>
+</blockquote>
+  <p>Numbers can be specified in decimal or hexadecimal form. Hexadecimal 
+  numbers are prefixed with either $ or 0x. The following lines are examples of 
+  valid numbers:</p>
+<blockquote>
+  <pre>256
+0xFF
+$1234</pre>
+</blockquote>
+<h2>2. Script Structure</h2>
+<p>The top-level elements of scripts are called <i>blocks</i>. Currently there 
+are four types of blocks: <code>struct</code>, <code>enum</code>, <code>alias</code> 
+and <code>include</code>.</p>
+<h3>2.1. Struct Blocks</h3>
+<p>A struct block has the following syntax:</p>
+<blockquote>
+<p>[<i>attributes</i>] <b>struct</b> [<i>attributes</i>]<i> structName </i>[<i>attributes</i>]<code>
+<b><font size="4">{</font></b></code> [<i>field</i>]... <b> <code>
+<font size="4">}</font></code></b> <br />
+<i>structName</i> = <i>string</i></p>
+</blockquote>
+<p>The string following the <b>struct</b> keyword is the name of the structure. 
+The name is case-insensitive and must be unique within the structure file.</p>
+<p>The <i>attributes</i> declaration has the following syntax:</p>
+<blockquote>
+<p><b><code><font size="4">[</font></code></b><i>attrName</i>[=<i>attrValue</i>][<code><b><font size="4">,</font></b></code><i>attrName</i>[=<i>attrValue</i>]]...<code><b><font size="4">]<br />
+</font></b></code><i>attrName = string</i><br />
+<i>attrValue = string</i></p>
+
+</blockquote>
+
+<p>If the attribute value is omitted, it is assumed that the value of the 
+attribute is &quot;1&quot;. Attribute names are case-sensitive. All attribute declarations 
+for a structure or field are merged, and the location of the attribute is 
+irrelevant. It is allowed to specify the same attribute multiple times, however, 
+only the latest specified value is actually used.</p>
+
+<p>Only the attributes supported by the respective block or field type can be 
+used in an attributes block. Using other attributes is an error.</p>
+<p>The following lines are examples of valid structure blocks. These definitions 
+are equivalent.</p>
+<blockquote>
+  <pre>[hidden] struct TestStruct { u16 TestField; }
+struct [hidden=1] &quot;TestStruct&quot; { u16 TestField; }</pre>
+</blockquote>
+<h3>2.2. Field Declarations</h3>
+<p>A field declaration has the following syntax:</p>
+<blockquote>
+<p>[<i>attributes</i>] <i>fieldType</i> [<i>attributes</i>] [<i>defaultAttribute</i>] 
+[<i>attributes</i>] <b> <code><font size="4">;<br />
+</font></code></b><i>fieldType</i> = <i>string</i><br />
+<i>defaultAttribute </i> = <i>string</i></p>
+
+</blockquote>
+<p>The declaration of field attributes has the same syntax as the declaration of 
+the structure attributes. </p>
+<p><i>fieldType</i> must be either one of the built-in field types or one of the 
+aliases defined prior to the definition of the structure using the alias.</p>
+<p><i>defaultAttribute</i> specifies the value of the default attribute of the 
+structure. The default attribute depends on the field type. For most visible 
+field types, the default attribute is <code>tag</code>.</p>
+
+<p>The declaration of a container field, which contains other fields, has the 
+following syntax:</p>
+
+<blockquote>
+<p>[<i>attributes</i>] <i>fieldType</i> [<i>attributes</i>] [<i>defaultAttribute</i>] 
+[<i>attributes</i>] <code>
+<b><font size="4">{</font></b></code> [<i>field</i>]... <b> <code>
+<font size="4">}</font></code></b> </p>
+
+</blockquote>
+<p>The following lines are examples of valid field declarations. These 
+definitions are equivalent. The preferred form is the first one. </p>
+
+<blockquote>
+  <pre>[readonly] u16 Signature;
+u16 [readonly=1, tag=&quot;Signature&quot;];
+u16 (Signature) [readonly=&quot;1&quot;];</pre>
+</blockquote>
+<p>The following container field declarations are also equivalent. Again, the first form 
+is preferred. Note that <code>expr</code> is the default attribute for the <b>if</b> field.</p>
+
+<blockquote>
+  <pre>if (PESignature == &quot;PE&quot;) { message &quot;Found a PE header&quot;; }
+[expr=(PESignature == &quot;PE&quot;)] if { message (Found a PE header); }</pre>
+</blockquote>
+
+<h3>2.3. Enum Blocks</h3>
+<p>An enum block has the following syntax:</p>
+<blockquote>
+<p>[<i>attributes</i>] <b>enum</b> [<i>attributes</i>]<i> enumName </i>[<i>attributes</i>]<code>
+<b><font size="4">{</font></b></code> <i>constName</i>[=<i>constValue</i>][<code><font size="4"><b>,</b></font></code><i>constName</i>[=<i>constValue</i>]]... <b> <code>
+<font size="4">}</font></code></b> <br />
+<i>enumName</i> = <i>string<br />
+constName = string<br />
+constValue = number</i></p>
+</blockquote>
+<p>Names of enum types are case-insensitive and must be unique within the file. 
+Names of constants within an enum are not required to be unique, unless the enum 
+is declared with the [global] or [globalmask] attribute (described below).</p>
+<p>If the value for an enum constant is not specified, the default value is 
+used. The default value is 0 for the first constant of the enum, or the value of 
+the previous constant incremented by one for the following constants. It is 
+allowed to have several constants with the same value in an enum.</p>
+<p>The following is an example of an enum declaration:</p>
+<blockquote>
+  <pre>[global] enum TestEnum { ZERO, FOUR=4, FIVE, SIX, ELEVEN=0xA, TWENTY=$14 };</pre>
+</blockquote>
+<h3>2.4. Aliases</h3>
+<p>Aliases allow you to create your own data types, derived from one of the 
+standard Structorian data types. When you define an alias, you specify the name 
+of the derived type, the name of the base type and the set of attributes that 
+should be applied to the base type.</p>
+<p>An alias has the following syntax:</p>
+<blockquote>
+  <p>[<i>attributes</i>] <b>alias</b> [<i>attributes</i>] <i>baseType</i> [<i>attributes</i>]
+  <i>derivedType</i><b><code><font size="4">;<br />
+  </font></code></b> <i>baseType = string<br />
+  derivedType = string</i></p>
+</blockquote>
+
+<p>Type names are case-insensitive and must be unique. You may not define an 
+alias with the same name as the name of a built-in type.</p>
+<p>The following is an example of an alias declaration:</p>
+<blockquote>
+  <pre>alias str [len=8] resref;</pre>
+</blockquote>
+<p>When such an alias is defined, the following field declarations are 
+equivalent:</p>
+<blockquote>
+  <pre>str [len=8] Signature;
+resref Signature;</pre>
+</blockquote>
+<p>Attributes specified in the field declaration of an alias type override the 
+attributes specified in the alias declaration. Therefore, the following 
+definitions are equivalent:</p>
+<blockquote>
+  <pre>str [len=16] Signature;
+resref [len=16] Signature;</pre>
+</blockquote>
+<h3>2.5. Includes</h3>
+<p>An include declaration allows you to include the contents of another 
+structure file in the current file. It has the following syntax:</p>
+<blockquote>
+  <p><b>include</b> <i>fileName</i><b><code><font size="4">;</font></code></b><br />
+  <i>fileName</i> = <i>string</i></p>
+</blockquote>
+<p>If fileName is not a full pathname, it is treated as a pathname relative to 
+the file containing the include declaration.</p>
+<p>Recursive includes are not allowed. Struct and enum names must be unique 
+within all included files. Therefore, if the file A has a definition of the 
+structure S and the file B also has a definition of the structure S, and B is 
+included in A, a duplicate structure name error will be reported.</p>
+<h2>3. Field Types and Attributes</h2>
+<h3>3.1. Struct Attributes</h3>
+<p>The following attributes can be specified for struct blocks:</p>
+<p><b>filemask</b>=<i>string</i></p>
+<blockquote>
+  <p>Specifies the files for which the structure is applied by default. When a 
+  file is opened and the structure definition file is not loaded, or when a file 
+  name is specified on the command line, Structorian scans its home directory 
+  and all its subdirectories for structure definition files (*.strs). It tries 
+  to load all those files, and as soon as it finds a structure with [filemask] 
+  matching the name of the data file, it loads the structure definition file 
+  containing that structure and applies it at the offset 0 of the data file.</p>
+  <p>The value of this attribute is a standard DOS file mask or a list of file 
+  masks separated with semicolons.</p>
+  <p>Example:</p>
+  <pre>[filemask=&quot;t-hist.$*&quot;] struct &quot;History file 2603&quot;</pre>
+</blockquote>
+<p><b>hidden</b>=1|0</p>
+<blockquote>
+  <p>Structures for which the [hidden] attribute is set are not shown in the 
+  &quot;Select structure&quot; dialog.</p>
+</blockquote>
+<p><b>preload</b>=1|0</p>
+<blockquote>
+  <p>This attribute controls the structure loading order. Normally, Structorian 
+  loads the data for a structure only when it is selected in the structure tree 
+  (or shown in the table view). Before the structure is loaded, it is shown as 
+  just a name in the tree. The [+] sign is shown before it if the structure 
+  contains <b>child</b> fields.</p>
+  <p>If the [preload] attribute is specified, when a structure is loaded, its 
+  immediate children are loaded as well. (The preloading does not go deeper: if 
+  the immediate children have the [preload] attribute, the grandchildren are not 
+  loaded at the same time.) The [preload] attribute is helpful when the child 
+  structures can have varying names (the <b>include</b> [replace] field or the
+  <b>nodename</b> field is used), or when the presence of children in the child 
+  structures is determined dynamically. In these cases, using [preload] allows 
+  to reduce the number of visible changes happening in the structure tree as the 
+  structures are loaded.</p>
+</blockquote>
+<p><b>tableview</b>=1|0</p>
+<blockquote>
+  <p>If the [tableview] attribute is specified, the table view for the structure 
+  is opened automatically when the structure is selected. (If there is already a 
+  table view open when the structure is selected, it is not replaced.) The [tableview] 
+  attribute is convenient for structures that are best viewed in the table view 
+  - structures that have few fields and a large number of instances in the file.</p>
+</blockquote>
+<h3>3.2. Enum Attributes</h3>
+<p>The following attributes can be specified for enum blocks:</p>
+<p><b>global</b>=1|0</p>
+<blockquote>
+  <p>If the [global] attribute is specified, all the constants in the enum are 
+  registered as global variables. This allows to use the constants in 
+  expressions.</p>
+  <p>Example:</p>
+  <pre>[global] enum PEResourceType { RT_CURSOR=1, RT_BITMAP, RT_ICON, RT_MENU }
+...
+enum16 ResType [enum=PEResourceType];
+...
+switch (Parent.ResType) 
+{
+    case (RT_BITMAP) { child BITMAPINFOHEADER [offset=ResOffset]; }
+    case (RT_MENU)   { child MENUHEADER [offset=ResOffset]; }
+    ...
+}</pre>
+</blockquote>
+<p><b>globalmask</b>=1|0</p>
+<blockquote>
+  <p>If the [globalmask] attribute is specified, all the constants in the enum 
+  are registered as global variables with values equal to the respective bit 
+  masks. So, for a constant with value 0, the global with value 1 is registered, 
+  for constant 1 - global 2, for constant 2 - global 4, and so on. This allows 
+  to use the constants as bit masks in expressions.</p>
+  <p>Example:</p>
+  <pre>[globalmask] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, DS_SETFONT=6, ... }
+...
+set32 dwStyle [enum=DialogStyle];
+if (dwStyle &amp; DS_SETFONT)
+{
+    ...
+}</pre>
+  <p>In this example, the value of the global variable DS_SETFONT is 32 (2<sup>6</sup>).</p>
+  <p>The [globalmask] and [global] attributes are mutually exclusive: if both 
+  are specified, only the globalmask is actually processed.</p>
+</blockquote>
+<p><b>inherit</b>=<i>enumName</i></p>
+<blockquote>
+  <p>When the [inherit] attribute is specified, all the constants in the enum <i>
+  enumName</i> are added to the enum. The enum <i>enumName</i> must be defined 
+  earlier in the file. Note that if the enum <i>enumName</i> does not have the 
+  [global] or [globalmask] attribute, the constants in it are not registered as 
+  globals, even if the inheriting enum does have one of these attributes. It is 
+  allowed to specify [inherit] multiple times, to inherit constants from 
+  multiple enum definitions.</p>
+  <p>Example:</p>
+  <pre>enum WindowStyle { WS_TABSTOP=16, WS_GROUP, ... }
+[inherit=WindowStyle] enum DialogStyle { DS_ABSALIGN, DS_SYSMODAL, ... }</pre>
+</blockquote>
+<h3>3.3. Common Field Attributes</h3>
+<p>The following attributes are common for all field types:</p>
+<p><span class="attrName">tag</span>=<i>string&nbsp;&nbsp; </i>(default attribute)</p>
+<blockquote>
+  <p>The field tag is its name that is shown to the user. It is shown in the 
+  field view and in the column captions of the table view. For hidden fields, 
+  the tag value is ignored. If the tag doesn't contain spaces or other 
+  characters that require string quoting, it can also be used to refer to the 
+  field in expressions. If the tag is not specified, the default tag &quot;Unknown&quot; 
+  is used.</p>
+</blockquote>
+<p><b>id</b>=<i>string</i></p>
+<blockquote>
+  <p>The field ID is used to refer to the field in expressions. It should be 
+  specified only if the tag contains spaces or other characters that require 
+  string quoting.</p>
+  <p>Example:</p>
+  <pre>i32 &quot;BIFF count&quot; [id=BIFFCount];</pre>
+</blockquote>
+<p><b>hidden</b>=1|0</p>
+<blockquote>
+  <p>Fields that have the [hidden] attribute are not shown to the user. This 
+  attribute can be used for various marker or offset fields.</p>
+  <p>Example:</p>
+  <pre><b>[hidden] str [len=2] PESignature;</b>
+if (PESignature == &quot;PE&quot;)
+{
+  child PEHeader [offset=NewHdrOffset];
+}</pre>
+</blockquote>
+<p><b>readonly</b>=1|0</p>
+<blockquote>
+  <p>You can set a [readonly] attribute on a field to disallow editing this 
+  field. This can be helpful for fields that cannot be changed without 
+  corrupting the structure of the file, like various offset fields.</p>
+</blockquote>
+<h3>3.4. Integer Fields</h3>
+<p>Integer fields are probably the most commonly used field types in 
+Structorian. The data size of the field is encoded in the field name, so every 
+integer type is actually three separate types, one for each data size (8, 16 and 
+32 bits). All integer fields can be used in expressions. </p>
+<p>The following integer field types are supported:</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>i8, i16, i32</td>
+    <td>Signed decimal numbers</td>
+  </tr>
+  <tr>
+    <td>u8, u16, u32</td>
+    <td>Unsigned decimal numbers</td>
+  </tr>
+  <tr>
+    <td>x8, x16, x32</td>
+    <td>Hexadecimal numbers</td>
+  </tr>
+  <tr>
+    <td>bits8, bits16, bits32</td>
+    <td>Binary numbers</td>
+  </tr>
+  <tr>
+    <td>enum8, enum16, enum32</td>
+    <td>Enums</td>
+  </tr>
+  <tr>
+    <td>set8, set16, set32</td>
+    <td>Sets</td>
+  </tr>
+</table>
+<p>Integer fields can also be used within bitfields (described in detail below, 
+with examples). For fields within bitfields, the following attributes must be 
+specified:</p>
+<p><b>frombit</b>=<i>number</i></p>
+<blockquote>
+  <p>Starting bit of the value. Must be within range from 0 to the size of the 
+  containing bitfield minus one.</p>
+</blockquote>
+<p><b>tobit</b>=<i>number</i></p>
+<blockquote>
+  <p>Ending bit of the value. Must be within range from the [frombit] value to 
+  the size of the containing bitfield minus one. For a value that occupies 1 
+  bit, the [frombit] and [tobit] values should be equal.</p>
+</blockquote>
+<p>For <b>i</b>, <b>u</b>, <b>x</b>, and <b>bits</b> fields no other attributes are supported. The
+<b>i</b>, <b>u </b>and 
+<b>x</b> fields are shown as decimal or hexadecimal numbers, and the <b>bits</b> fields are 
+shown as a sequence of binary digits with the specified size. For <b>enum</b> and
+<b>set</b> 
+fields, however, an additional attribute is required:</p>
+<p><b>enum</b>=<i>enumName</i>&nbsp;&nbsp; (required)</p>
+<blockquote>
+  <p>Specifies the name of the enum used to interpret the value. It is not 
+  required that the enum should be defined before the field declaration in the 
+  file.</p>
+  <p>When an enum field is loaded, Structorian searches the enum definition for 
+  a constant that has a value equal to the value loaded from the data file. If 
+  such a constant is found, the name of the constant is displayed. If the 
+  constant is not found, the loaded value is shown as a number and highlighted 
+  with the unknown data color.</p>
+  <p>When a set field is loaded, Structorian loops through all nonzero bits in 
+  the loaded value. For each nonzero bit, it searches for a constant with the 
+  value equal to the index of the bit. If the constant is found, its name is 
+  appended to the displayed field value. Otherwise, Structorian adds &quot;&lt;bitN&gt;&quot; to 
+  the displayed field value, where N is the index of the bit, and highlights the 
+  value with the unknown data color.</p>
+  <p>This is best illustrated by an example. Consider the following definitions:</p>
+  <pre>enum WorldMapAreaFlags { Visible, &quot;Can be visited&quot;=2, Visited }
+...
+set32 Flags [enum=WorldMapAreaFlags];</pre>
+  <p>If the value loaded from the data file is equal to 0, Structorian will just 
+  show an empty value in the cell, since no bits are set.</p>
+  <p>If the loaded value is 1, Structorian will show &quot;Visible&quot;. The bit with the 
+  index 0 is set, so Structorian displays the name of the constant with the 
+  value 0.</p>
+  <p>Now suppose the loaded value is 7. The bits with the indexes 0, 1, 2 are 
+  set in the value. However, there are only constants with values 0 and 2; there 
+  is no constant for the value 1. Therefore, Structorian will display &quot;Visible, 
+  &lt;bit1&gt;, Can be visited&quot; and highlight the field in blue.</p>
+</blockquote>
+
+<h3>3.5. String Fields</h3>
+<p>A string is a sequence of characters that either has a fixed length (static 
+or calculated as a result of an expression) or is terminated with a null byte. 
+Structorian supports both ASCII and Unicode strings. String values can also be 
+used in expressions. Details on using strings in expressions are described 
+below, in the section on expression syntax.</p>
+<p>The following string types are supported:</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>str</td>
+    <td>ASCII string</td>
+  </tr>
+  <tr>
+    <td>cstr</td>
+    <td>Null-terminated ASCII string</td>
+  </tr>
+  <tr>
+    <td>wstr</td>
+    <td>Unicode string</td>
+  </tr>
+  <tr>
+    <td>char</td>
+    <td>ASCII character (alias for <b>str [len=1]</b>)</td>
+  </tr>
+  <tr>
+    <td>wchar</td>
+    <td>Unicode character (alias for <b>wstr [len=1]</b>)</td>
+  </tr>
+</table>
+<p>The following attribute is common to all string types:</p>
+<p><b>len</b>=<i>expression</i></p>
+<blockquote>
+  <p>Specifies the length of the string in characters. If this attribute is not 
+  specified, the string continues until the following null character or until 
+  the end of file.</p>
+</blockquote>
+<p>Actually, both <b>str</b> and <b>cstr</b> fields will read as many bytes as 
+specified by the [len] attribute, and will stop at the first null character 
+encountered. The only difference between them is their behavior when editing. 
+For a <b>str</b> field of length N, it is allowed to enter exactly N characters. 
+On the other hand, for a <b>cstr</b> field of length N, only N-1 characters can 
+be entered, and the Nth character will always be the terminating null byte. <b>
+wstr</b> fields behave like <b>str</b> fields, and do not enforce the 
+terminating null character.</p>
+<h3>3.6. Other Visible Fields</h3>
+<p>Besides integer and string fields, Structorian supports the following visible 
+field types:</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>float</td>
+    <td>Single precision (4-byte) floating point number</td>
+  </tr>
+  <tr>
+    <td>double</td>
+    <td>Double precision (8-byte) floating point number</td>
+  </tr>
+  <tr>
+    <td>unixtime</td>
+    <td>Unix time value (number of seconds since 01 Jan 1970)</td>
+  </tr>
+  <tr>
+    <td>dosdatetime</td>
+    <td>DOS date/time value (two 2-byte numbers, one containing the date, the 
+    other - the time)</td>
+  </tr>
+  <tr>
+    <td>message</td>
+    <td>Text message</td>
+  </tr>
+  <tr>
+    <td>error</td>
+    <td>Error message (alias for <b>message [error=1]</b>)</td>
+  </tr>
+  <tr>
+    <td>calc</td>
+    <td>Calculated field</td>
+  </tr>
+</table>
+<p>The <b>float</b>, <b>double</b>, <b>unixtime</b> and <b>dosdatetime</b> fields do not require any 
+attributes.</p>
+<h4>3.6.1. The message field</h4>
+<p>The <b>message</b> field doesn't actually load any data from the file. It 
+allows you to show a text message as a structure field (for example, to show an 
+error message if the data loaded from the file doesn't match a signature 
+required by the structure).</p>
+<p>The following attributes apply to the <b>message</b> field:</p>
+<p><b>text</b>=<i>string</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+  <p>The text that is shown to the user.</p>
+</blockquote>
+<p><b>error</b>=1|0</p>
+<blockquote>
+  <p>If the [error] attribute is set, the message text&nbsp; is highlighted with 
+  the red font color. If the attribute is not set, the message text is shown as 
+  regular black.</p>
+  <p>The standard alias <code>error</code> expands to <code>message [error=1]</code>.</p>
+</blockquote>
+<h4>3.6.2. The calc field</h4>
+<p>The <b>calc</b> field also doesn't load any data from the file. This field 
+shows the result of calculating an expression. The following attribute applies 
+to it:</p>
+<p><b>value</b>=<i>expression</i></p>
+<blockquote>
+  <p>Expression that is evaluated. The result of evaluating the expression (a 
+  string or a number) is shown to the user.</p>
+</blockquote>
+<p>The following structure definition provides an example of using the <b>calc</b> 
+field. In this example, the value shown to the user is calculated by combining 
+several values separately loaded from the file.</p>
+<blockquote>
+  <pre>struct FidoAddr
+{
+  [hidden] i16 Zone;
+  [hidden] i16 Net;
+  [hidden] i16 Node;
+  [hidden] i16 Point;
+  <b>calc Address [value=(Zone + &quot;:&quot; + Net + &quot;/&quot; + Node + &quot;.&quot; + Point)];</b>
+}</pre>
+</blockquote>
+<h3>3.7. Structure Navigation</h3>
+<p>The following fields allow to navigate within the file: skip a certain number 
+of bytes in a structure or revert by a certain number of bytes, jump to a 
+certain absolute offset in the file and so on.</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>skip</td>
+    <td>Jumps to a relative offset</td>
+  </tr>
+  <tr>
+    <td>seek</td>
+    <td>Jumps to an absolute offset within the file</td>
+  </tr>
+  <tr>
+    <td>rewind</td>
+    <td>Returns to the position that was current before the last <b>seek</b> 
+    field</td>
+  </tr>
+  <tr>
+    <td>align</td>
+    <td>Aligns the current position in the file to a word boundary, dword 
+    boundary or another multiple</td>
+  </tr>
+</table>
+<h4>3.7.1. The skip field</h4>
+<p>The <b>skip</b> field allows to move several bytes backward or forward within 
+a structure. This can be helpful, for example, to skip unused parts of the 
+structure or to go over some data multiple times, with different interpretation 
+each time.</p>
+<p>The following attribute applies to the <b>skip</b> field:</p>
+<p><b>offset</b>=<i>expression</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+  <p>Specifies the relative offset to which the current position is moved.</p>
+</blockquote>
+<p>The following structure definition provides an example of using the <b>skip</b> 
+field. In this example, the data can be interpreted as one of the two possible 
+structures, and the structure to use is determined by the marker at offset 2 
+from the start of the structure.</p>
+<blockquote>
+  <pre>struct DLGTEMPLATE_Base
+{
+  <b>skip 2;</b>
+  [hidden] x16 signature;
+  <b>skip -4;</b>
+  if (signature == 0xFFFF)
+  {
+    include [replace] DLGTEMPLATEEX;
+  }
+  else
+  {
+    include [replace] DLGTEMPLATE;
+  }
+}</pre>
+</blockquote>
+<h4>3.7.2. The seek and rewind fields</h4>
+<p>The <b>seek</b> field allows you to move to an absolute offset within the 
+file. This can be useful when you want to show the data scattered through 
+different parts of the file in a single structure.</p>
+<p>Every time the <b>seek</b> field is processed, the current offset in the file 
+before the seek is remembered. The <b>rewind</b> field allows you to return to 
+the offset that was current before the last seek. The offsets are stored in a 
+stack, so if you have several <b>seek</b> statements, you can use <b>rewind</b> 
+several times to trace back through the <b>seek</b> steps.</p>
+<p>When a structure containing <b>seek</b> fields has finished loading, the 
+current position in the file is automatically reverted to the offset that was 
+current before the first <b>seek</b> statement in the structure. Thus, a 
+sequence of several structures containing <b>seek</b> statements can be loaded 
+correctly without the need to use explicit rewinds.</p>
+<p>The <b>rewind</b> field doesn't take any attributes. The following attribute 
+applies to the <b>seek</b> field:</p>
+<p><b>offset</b>=<i>expression</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+  <p>Specifies the absolute offset to which the current position is moved.</p>
+</blockquote>
+<p>The following structure definition presents a typical use case for the <b>
+seek</b> and <b>rewind</b> fields. In this example, the structure contains the 
+offset of a null-terminated string, and it is desired to show that string within 
+the structure.</p>
+<blockquote>
+  <pre>struct IMAGE_EXPORT_DIRECTORY
+{
+  include PEDirHeader;
+  x32 NameOffset;
+  <b>seek NameOffset-ExportDelta;
+</b>  str Name;
+  <b>rewind;</b>
+  x32 Base;
+  ...
+}</pre>
+</blockquote>
+<h4>3.7.3. The align field</h4>
+<p>The <b>align</b> field allows you to ensure that the current position in a 
+file is aligned to a multiple of a certain number of bytes. The following 
+attribute applies to it:</p>
+<p><b>bytes</b>=<i>number</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+<p>The number of bytes to the multiple of which the position is aligned. Must be 
+within range from 1 to 65536.</p>
+</blockquote>
+<p>For example, if the field</p>
+<blockquote>
+  <pre>align 4;</pre>
+</blockquote>
+<p>occurs at the offset 0x304 in the file, it doesn't change the current 
+position in the file, because it is already a multiple of 4. On the other hand, 
+if the current position is 0x305, the field will move the position to 0x308 - 
+the smallest multiple of 4 that is larger than 0x305.</p>
+<h3>3.8. Referencing Other Structures</h3>
+<p>The following field types allow to reference other structures from the 
+structure.</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>include</td>
+    <td>Includes the fields of a different structure into the current structure</td>
+  </tr>
+  <tr>
+    <td>child</td>
+    <td>Adds a different structure as the child of the current structure</td>
+  </tr>
+  <tr>
+    <td>sibling</td>
+    <td>Adds a different structure as the sibling of the current structure</td>
+  </tr>
+</table>
+
+<h4>3.8.1. The include field</h4>
+<p>The <b>include</b> field allows to include the fields of a different 
+structure into the current structure. The following attributes apply to it:</p>
+<p><b>struct</b>=<i>structName</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+  <p>Name of the structure to include. The included structure can be defined at 
+  any place in the structure definition file - there is no requirement that this 
+  is defined above the including structure.</p>
+</blockquote>
+<p><b>replace</b>=1|0</p>
+<blockquote>
+  <p>If the [replace] attribute is set, the name of the including structure 
+  becomes the same as the name of the included structure. The name is shown in 
+  the tree view and is used for constructing the table view (the table view can 
+  only contain structures with the same name).</p>
+</blockquote>
+<p>The most common use of the <b>include</b> field without the [replace] 
+attribute is reusing repeated structure fragments. The following structure 
+definitions provide an example of such use:</p>
+<blockquote>
+  <pre>struct PEDirHeader
+{
+  x32 Characteristics;
+  unixtime TimeDateStamp;
+  u16 MajorVersion;
+  u16 MinorVersion;
+}
+
+struct IMAGE_EXPORT_DIRECTORY
+{
+  <b>include PEDirHeader;
+</b>  x32 NameOffset;
+  ...
+}
+
+struct IMAGE_RESOURCE_DIRECTORY
+{
+  <b>include PEDirHeader;</b>
+  u16 NumberOfNamedEntries;
+  ...
+}</pre>
+</blockquote>
+<p>The <b>include</b> field with the [replace] attribute is used when the data 
+should be interpreted as one of a set of different structures, usually depending 
+on the value of some signature field. The following structure definition 
+provides an example of such use:</p>
+<blockquote>
+  <pre>[hidden] str [len=4] Signature;
+skip -4;
+switch (Signature)
+{
+  case (&quot;BIFF&quot;) { <b>include [replace] BIFF;</b> }
+  case (&quot;KEY &quot;) { <b>include [replace] KEY;</b> }
+  case (&quot;BAM &quot;) { <b>include [replace] BAM;</b> }
+  ...
+}</pre>
+</blockquote>
+<h4>3.8.2. The child and sibling Fields</h4>
+<p>The <b>child</b> and <b>sibling</b> fields are the key to creating a 
+structure hierarchy within the file. The <b>child</b> field tells Structorian 
+that a single structure or an array of structures of a given type is a child of 
+the current structure and starts at a specified offset. The <b>sibling</b> field 
+is similar to <b>child</b>, but the structures are added at the same level as 
+the structure containing the <b>sibling</b> field.</p>
+<p>The following attributes apply to the <b>child</b> and <b>sibling</b> fields:</p>
+<p><b>struct</b>=<i>structName</i>&nbsp;&nbsp; (default attribute)</p>
+<blockquote>
+<p>Specifies the name of the structure that is the child or sibling. This 
+attribute is required for <b>child</b> fields. For <b>sibling</b> fields, this 
+attribute is optional, and if it is not specified, it is assumed that the 
+sibling structure has the same type as the current one.</p>
+</blockquote>
+<p><b>offset</b>=<i>expression</i></p>
+<blockquote>
+<p>Absolute offset of the first child or sibling structure. If this attribute is 
+not specified, the children or siblings start immediately after the current 
+structure.</p>
+</blockquote>
+<p><b>count</b>=<i>expression</i></p>
+<blockquote>
+<p>Count of the child or sibling structures in the array. If this attribute is 
+not specified, the count of 1 is assumed.</p>
+</blockquote>
+<p><b>group</b>=<i>string</i></p>
+<blockquote>
+<p>This attribute can be used only for <b>child</b> fields. If the [group] 
+attribute is set, the children are added not directly to the structure 
+containing the <b>child</b> field, but to an intermediate node. This can be 
+useful when a structure has many children of different types.</p>
+<p>An example of using the [group] attribute is given in the following structure 
+definition:</p>
+  <pre>struct AREA
+{
+  ...
+  <b>child AreaNPC [group=&quot;NPCs&quot;, offset=StructOffset+NPCOffset, count=NPCCount];
+  child AreaTrigger [group=&quot;Triggers&quot;, offset=StructOffset+TriggerOffset, count=TriggerCount];</b>
+  ...
+}</pre>
+  <p>The result of using such a definition is shown in the screenshot below:</p>
+  <p><img border="0" src="ChildGroup.gif" width="171" height="98" /></p>
+</blockquote>
+<p>The most common use of a <b>sibling</b> field is <i>tail recursion</i> - 
+declaring another instance of the current structure that follows the current 
+structure if some condition is true. The simplest case of tail recursion is a 
+situation when the entire file consists of a series of structures of the same 
+type. This can be represented by the following condition:</p>
+<blockquote>
+  <pre>struct &quot;Event record&quot;
+{
+  ...
+  if (CurOffset &lt; FileSize)
+  {
+    sibling;
+  }
+}</pre>
+</blockquote>
+<p>Other possible uses for a <b>sibling</b> field include situations when an 
+array of variable size structures occupies a buffer of certain size and the 
+number of structures is not known in advance, or when an array of structures is 
+repeated until some marker, like a structure entirely filled with zeros.</p>
+<h3>3.9. Loops and Conditions</h3>
+<p>Structorian has various means to implement control structures in expressions. 
+It can repeat a certain part of a structure, or include some fields in the 
+structure only if some condition is true. The following field types are used to 
+implement control structures:</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>repeat</td>
+    <td>Repeats a part of a structure a certain number of times</td>
+  </tr>
+  <tr>
+    <td>if</td>
+    <td>Adds fields to a structure if some condition is true</td>
+  </tr>
+  <tr>
+    <td>elif</td>
+    <td>Adds fields to a structure if the condition is true and the conditions 
+      of all previous<b> </b><span class="fieldName">if</span>/<span class="fieldName">elif</span> 
+      fields are false</td>
+  </tr>
+  <tr>
+    <td>else</td>
+    <td>Adds fields to a structure if the condition of all previous <span class="fieldName">if</span>/<span class="fieldName">elif</span> 
+      fields is false</td>
+  </tr>
+  <tr>
+    <td>switch</td>
+    <td>Selects one of the case branches depending on some condition</td>
+  </tr>
+  <tr>
+    <td>case</td>
+    <td>One of the branches of a switch statement</td>
+  </tr>
+  <tr>
+    <td>default</td>
+    <td>The default branch of a switch statement (alias for <b>case [default=1]</b>)</td>
+  </tr>
+</table>
+
+<p>All of these field types are container fields - that is, they contain other 
+fields. Control structures can be nested, and there is no limit on the nesting 
+depth.</p>
+<h4>3.9.1. Loops</h4>
+<p>The <b>repeat</b> field allows to implement the simplest control structure - 
+repeating some fields of a structure a certain number of times. The following 
+attribute applies to it:</p>
+<p><b>count</b>=<i>expression</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+<p>Specifies the number of times the fields under the <b>repeat</b> field are 
+repeated. The expression is evaluated once, before the child fields are 
+processed. If the value of the expression is less or equal than 0, the child 
+fields of the <b>repeat</b> field are not added to the structure.</p>
+</blockquote>
+<p>The following fragment of a structure definition provides a simple example of 
+using a <b>repeat</b> field:</p>
+<blockquote>
+  <pre>struct IMAGE_OPTIONAL_HEADER
+{
+  ...
+  <b>repeat(13)</b>
+  <b>{</b>
+    x32 VirtualAddress;
+    u32 Size;
+  <b>}</b>
+  ...
+}</pre>
+</blockquote>
+<p>The number of the current iteration is added to the tags of fields within the
+<b>repeat</b> block. Thus, the structure definition shown above looks like this 
+in the field view:</p>
+<blockquote>
+<p><img border="0" src="Repeat.gif" width="269" height="156" /></p>
+</blockquote>
+<h4>3.9.2. Conditions</h4>
+<p>The fields used to implement simple condition checks are <span class="fieldName">if</span>, 
+  <span class="fieldName">elif</span> and <span class="fieldName">else</span>. 
+  The <span class="fieldName">if</span> field specifies a condition and a list 
+  of child fields, and the child fields are added to the structure if the condition 
+  is true. The <span class="fieldName">elif</span> and <span class="fieldName">else</span> 
+  fields can be used only immediately after an <span class="fieldName">if</span> 
+  field. The child fields of an <span class="fieldName">elif</span> field are 
+  added to the structure if the conditions of all preceding <span class="fieldName">if</span> 
+  and <span class="fieldName">elif</span> fields are false, and the condition 
+  of the <span class="fieldName">elif</span> field itself is true. For the <span class="fieldName">else</span> 
+  field, no condition is specified; its children are added to the structure if 
+  the conditions of all preceding <span class="fieldName">if</span> and <span class="fieldName">elif</span> 
+  fields are false.</p>
+<p> The following attribute applies to the <span class="fieldName">if</span> and 
+  <span class="fieldName">elif</span> fields:</p>
+<p><span class="attrName">expr</span>=<span class="def">expression</span>&nbsp;&nbsp; 
+  (required, default attribute)</p>
+<blockquote> 
+  <p>Specifies the condition of the <span class="fieldName">if</span> or <span class="fieldName">elif</span> 
+    field. If the condition is true, the child fields of the field are added to 
+    the structure.</p>
+</blockquote>
+<p>The <b>else</b> field doesn't accept any attributes.</p>
+<p>The following structure definition provides an example of using <b>if</b> and
+<b>else</b> fields. In this example, the text of the message is stored either as 
+ASCII or as Unicode, depending on the value of a flag field.</p>
+<blockquote>
+  <pre>struct MESSAGE_RESOURCE_ENTRY
+{
+  u16 Length;
+  u16 Flags;
+  <b>if (Flags == 1)</b>
+  <b>{</b>
+    wstr Text [len=((Length-4)/2)];
+  <b>}
+  else
+  {</b>
+    str Text [len=(Length-4)];
+  <b>}</b>
+}</pre>
+</blockquote>
+<h4>3.9.3. Switches</h4>
+<p>The <b>switch</b> field allows to implement more complex conditions than the
+<b>if</b> and <b>else</b> fields. The expression specified in the <b>switch</b> 
+field is evaluated, and the result of the evaluation is compared to the 
+conditions of the <b>case</b> fields within the switch. The children of the 
+first <b>case</b> field that has a matching condition are added to the 
+structure. If none of the conditions matched, the child fields of the <b>case</b> 
+field with the [default] attribute are added to the structure, or if there is no 
+such field, nothing is added.</p>
+<p>The following attribute applies to the <b>switch</b> field:</p>
+<p><b>expr</b>=<i>expression</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+<p>The condition of the switch statement. The result of evaluating this 
+expression is compared to the results of evaluating the [value] expressions of 
+the <b>case</b> branches.</p>
+</blockquote>
+<p>The following attributes apply to the <b>case</b> field:</p>
+<p><b>value</b>=<i>expression</i>&nbsp;&nbsp; (default attribute)</p>
+<blockquote>
+<p>The condition of the case branch. If the result of evaluating this expression 
+is equal to the result of evaluating the [expr] attribute of the <b>switch</b> 
+field, the child fields of this branch are added to the structure. The [value] 
+attribute is required unless the branch has the [default] attribute set.</p>
+</blockquote>
+<p><b>default</b>=1|0</p>
+<blockquote>
+<p>The contents of the branch with the [default] attribute is added to the 
+structure if none of the <b>case</b> fields matched the <b>switch</b> 
+expression. Only one [default] case is allowed in each <b>switch</b> field.</p>
+<p>The standard alias <code>default</code> expands to <code>case [default=1]</code>.</p>
+</blockquote>
+<p>Note that the switch and case conditions are not required to be numbers; 
+strings are also allowed.</p>
+<p>Note also that <b>switch</b> fields may only contain <b>case</b> fields, and
+<b>case</b> fields can only be used <b>within</b> switch fields.</p>
+<p>The following structure fragment provides an example of using the <b>switch</b> 
+and <b>case</b> fields:</p>
+<blockquote>
+  <pre>[hidden] x16 menuArray;
+<b>switch</b> <b>(menuArray)</b>
+<b>{</b>
+  <b>case 0      {</b> skip (-2); i16 MenuID; <b>}</b>
+  <b>case 0xFFFF {</b> i16 MenuID; <b>}</b>
+  <b>default     {</b> skip (-2); wstr MenuName; <b>}</b>
+<b>}</b></pre>
+</blockquote>
+<h3>3.10. Bitfields</h3>
+A <span class="def">bitfield</span> is a 
+<h3>3.11. Other Hidden Fields</h3>
+<p>This section describes the fields that do not fit in one of the categories 
+described above.</p>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" id="AutoNumber1">
+  <tr>
+    <td>local</td>
+    <td>Declares a local variable (alias for <b>calc [hidden=1]</b>)</td>
+  </tr>
+  <tr>
+    <td>global</td>
+    <td>Declares a global variable</td>
+    </tr>
+  <tr>
+    <td>nodename</td>
+    <td>Specifies the name of the node shown in the tree view</td>
+  </tr>
+  <tr>
+    <td>assert</td>
+    <td>Checks a condition and shows an error if it is false</td>
+  </tr>
+</table>
+
+<h4>3.11.1. The local and global Fields</h4>
+<p>The main use of <b>local</b> and <b>global</b> fields is saving the results 
+of calculating an expression so that it can be reused later. Expressions 
+calculated with <b>local</b> fields are accessible only from the same structure 
+(or from a child structure, via Parent references), and <b>global</b> 
+expressions are available from any structure, without the need to use any 
+qualifiers.</p>
+<p>The following attribute applies to both <b>local</b> and <b>global</b> 
+fields:</p>
+<p><b>value</b>=<i>expression&nbsp;&nbsp; </i>(required)</p>
+<blockquote>
+  <p>Expression that is evaluated.</p>
+</blockquote>
+<p>For <b>local</b> fields, the name used to refer to the expression value is 
+determined by the [id] and [tag] attributes, like most visible fields. For <b>
+global</b> fields, however, a different attribute is used:</p>
+<p><b>name</b>=<i>string</i>&nbsp;&nbsp; (required, default attribute)</p>
+<blockquote>
+  <p>Name of the global variable. May contain only characters that can be used 
+  in strings without quoting.</p>
+</blockquote>
+<p>If the same global variable is defined multiple times, later definitions are 
+ignored. They do not override the first definition.</p>
+<p>The following structure definition provides an example (rather complicated, 
+in fact) of using <b>local</b> and <b>global</b> fields. Here, the global 
+variable ExportDelta contains the value that must be subtracted from a virtual 
+address loaded from the file to get the actual offset within the file. This 
+value is used in several structures, so it is most convenient to declare it as a 
+global. The local variable SelfOffset contains the offset of the 
+PEExportedFunction structure from the start of the AddressOfFunctions array.</p>
+<blockquote>
+  <pre>struct PESection
+{
+   ...
+  if (Parent.ExportDirVA &gt;= VA &amp;&amp; Parent.ExportDirVA+Parent.ExportDirSize &lt; VA+RawSize)
+  {
+    <b>global ExportDelta [value=(VA - RawData)];
+</b>    child IMAGE_EXPORT_DIRECTORY [offset=Parent.ExportDirVA-<b>ExportDelta</b>];
+  }
+  ...
+}
+
+struct IMAGE_EXPORT_DIRECTORY
+{
+  ...
+  u32 NumberOfFunctions;
+  u32 NumberOfNames;
+  x32 AddressOfFunctions;
+  x32 AddressOfNames;
+  x32 AddressOfNameOrdinals;
+  child PEExportedFunction [offset=AddressOfFunctions-<b>ExportDelta</b>, count=NumberOfFunctions];
+}
+
+struct PEExportedFunction
+{
+  x32 Address;
+  <b>local SelfOffset [value=(StructOffset - Parent.AddressOfFunctions + ExportDelta)];
+</b>  seek (Parent.AddressOfNames - <b>ExportDelta + SelfOffset</b>);
+  x32 NameOffset;
+  seek NameOffset-<b>ExportDelta</b>;
+  str Name;
+  seek (Parent.AddressOfNameOrdinals - <b>ExportDelta + SelfOffset/2</b>);
+  [hidden] u16 _Ordinal;
+  calc Ordinal [value=_Ordinal+Parent.Base];
+}</pre>
+</blockquote>
+<h4>3.11.2. The nodename field</h4>
+<p>The <span class="fieldName">nodename</span> field allows to specify the name 
+  of the structure that is shown in the tree view. When a structure has multiple 
+  children of the same type, defining a <span class="fieldName">nodename</span> 
+  in the child structure provides an easy way to distinguish the children from 
+  each other.</p>
+<p>The following attribute applies to the field:</p>
+<p><span class="attrName">name</span>=<i>expression</i>&nbsp;&nbsp; (required, 
+  default attribute)</p>
+<blockquote>
+  <p>Specifies the name of the structure that is shown in the tree view.</p>
+</blockquote>
+
+<h4>3.11.3. The assert field</h4>
+<p>The <span class="fieldName">assert</span> field allows to check a condition 
+  and to show an error message if the condition is false. The main use for <span class="fieldName">assert</span> 
+  is checking signatures and other mandatory field values. If a required signature 
+  does not match, that means that either an incorrect structure has been applied 
+  to a file, or some assumptions about the file format are incorrect. In both 
+  cases, the structure definition will most likely not provide the correct representation 
+  of the file data, and it is better to show an error message rather than garbage 
+  data.</p>
+<p>The <span class="fieldName">assert</span> field can be also used to protect 
+  against coding errors in structure definitions. For example, when reverse-engineering 
+  file formats, it is very easy to add or remove some extra bytes or fields in 
+  a structure definition. If it is known that a structure has a fixed size, putting 
+  an assertion for that size will allow to catch such errors early and to avoid 
+  showing garbage data.</p>
+
+</body>
+
+</html>
